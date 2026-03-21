@@ -2,12 +2,12 @@ import React, { useEffect, useState } from "react";
 import API from "./services/api";
 
 function Dashboard() {
-  const [sales, setSales] = useState(0);
+  const [data, setData] = useState([]);
 
   useEffect(() => {
-    API.get("/sales/total")
+    API.get("/basket")
       .then(res => {
-        setSales(res.data.total_sales);
+        setData(res.data);
       })
       .catch(err => console.error(err));
   }, []);
@@ -15,7 +15,7 @@ function Dashboard() {
   return (
     <div style={{ padding: "40px" }}>
       <h1>Smart Sales Analytics Dashboard</h1>
-      <h2>Total Sales: {sales}</h2>
+      <pre>{JSON.stringify(data, null, 2)}</pre>
     </div>
   );
 }
