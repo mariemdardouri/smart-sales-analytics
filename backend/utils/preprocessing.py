@@ -2,7 +2,7 @@ import pandas as pd
 
 def load_data():
     df = pd.read_csv(
-        "data/ACHAT_NETTOYE_V2.csv",
+        "C:/Users/HP/Desktop/ACHAT_NETTOYE_final.csv",
         sep=";",
         encoding="utf-8-sig",
         on_bad_lines="skip"
