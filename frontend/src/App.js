@@ -1,14 +1,11 @@
-import Dashboard from "./Dashboard";
-import './App.css';
-import Prediction from "./components/Prediction";
+import Dashboard from "./components/Dashboard";
+import "./App.css";
 
 function App() {
   return (
-    <><div>
+    <div>
       <Dashboard />
-    </div><div>
-        <Prediction />
-      </div></>
+    </div>
   );
 }
 
