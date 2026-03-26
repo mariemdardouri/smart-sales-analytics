@@ -6,7 +6,7 @@ import "./App.css"; // Import the new CSS file
 
 function App() {
   const [page, setPage] = useState("home");
-
+  const [chatOpen, setChatOpen] = useState(false);
   return (
     <div className="App">
       <header className="app-header">
@@ -56,6 +56,27 @@ function App() {
         {page === "basket" && <BasketAnalysis />}
         {page === "prediction" && <Prediction />}
       </main>
+      {/* Chatbot Bubble */}
+<div 
+  className="chatbot-bubble"
+  onClick={() => setChatOpen(!chatOpen)}
+>
+  💬
+  <span className="chatbot-tooltip">Chatbot</span>
+</div>
+
+{/* Chatbot Window */}
+{chatOpen && (
+  <div className="chatbot-window">
+    <div className="chatbot-header">
+      <span>Chatbot</span>
+      <button onClick={() => setChatOpen(false)}>✖</button>
+    </div>
+    <div className="chatbot-body">
+      <p>Bonjour 👋 Pose ta question</p>
+    </div>
+  </div>
+)}
     </div>
   );
 }
