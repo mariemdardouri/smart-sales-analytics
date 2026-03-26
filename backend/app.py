@@ -7,6 +7,7 @@ from services.basket_service import df_all, get_categories, get_delegations, get
 import pandas as pd
 from typing import List
 from pydantic import BaseModel
+from services.chat_service import ask_chatbot
 app = FastAPI()
 origins = [
     "http://localhost:3000",
@@ -43,6 +44,18 @@ def sales_total():
     total = df["prix_total"].sum()
     return {"total_sales": total}
 """
+
+class ChatRequest(BaseModel):
+    question: str
+
+@app.post("/chat")
+def chat_endpoint(request: ChatRequest):
+    answer = ask_chatbot(request.question)
+    return {"answer": answer}
+
+
+
+
 class ProductPairRequest(BaseModel):
     produits: List[str]
 
