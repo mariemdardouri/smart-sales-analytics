@@ -1,0 +1,72 @@
+.prediction-container {
+  padding: 30px;
+  font-family: Arial, sans-serif;
+}
+
+.prediction-title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.prediction-input-container {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.prediction-input {
+  padding: 10px;
+  width: 250px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  outline: none;
+}
+
+.prediction-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.prediction-button:hover {
+  background-color: #0056b3;
+}
+
+.loading {
+  text-align: center;
+}
+
+.prediction-results {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.prediction-card {
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  min-width: 180px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.high {
+  color: green;
+  font-weight: bold;
+}
+
+.medium {
+  color: orange;
+  font-weight: bold;
+}
+
+.low {
+  color: red;
+  font-weight: bold;
+}

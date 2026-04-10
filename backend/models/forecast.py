@@ -6,7 +6,7 @@ df = preprocess_forecast()
 model = Prophet()
 model.fit(df)
 
-future = model.make_future_dataframe(periods=6, freq="ME")
+future = model.make_future_dataframe(periods=3, freq="ME")
 forecast = model.predict(future)
 
 def get_forecast():

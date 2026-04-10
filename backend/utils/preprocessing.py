@@ -1,9 +1,10 @@
 import pandas as pd
+from prophet import Prophet
 from mlxtend.frequent_patterns import apriori, association_rules
 
 def load_data():
     df = pd.read_csv(
-        "data/ACHAT_NETTOYE_V2.csv",
+        "C:/Users/mariem/Documents/smart-sales-analytics/backend/data/ACHAT_NETTOYE_V2.csv",
         sep=";",
         encoding="utf-8-sig",
         on_bad_lines="skip"
@@ -73,21 +74,29 @@ def get_association_rules():
 def forecast_by_product(product_name):
     df = load_data()
 
-    df = df[df["nom_produit"] == product_name]
+    df = df[df["nom_produit"].str.lower() == product_name.lower()]
+
+    if df.empty:
+        return {"error": "Produit non trouvé"}
 
     df["date_dachat"] = pd.to_datetime(df["date_dachat"])
 
-    df = df.groupby("date_dachat")["quantité_achetée"].sum().reset_index()
-
-    df = df.rename(columns={
-        "date_dachat": "ds",
-        "quantité_achetée": "y"
-    })
+    df_month = df.groupby(pd.Grouper(key="date_dachat", freq="MS"))["quantité_achetée"].sum().reset_index()
+    df_month = df_month.rename(columns={"date_dachat": "ds", "quantité_achetée": "y"})
 
     model = Prophet()
-    model.fit(df)
+    model.fit(df_month)
 
-    future = model.make_future_dataframe(periods=3, freq="M")
+    future = model.make_future_dataframe(periods=3, freq="MS")
     forecast = model.predict(future)
 
-    return forecast[["ds", "yhat"]].tail(3).to_dict(orient="records")
+    result = forecast[["ds", "yhat"]].tail(3)
+
+    max_value = result["yhat"].max() if result["yhat"].max() > 0 else 1
+    result["probability"] = (result["yhat"] / max_value * 100).round(1)
+
+    result["ds"] = result["ds"].dt.strftime("%B %Y") 
+
+    result = result.fillna(0)
+
+    return result[["ds", "probability"]].to_dict(orient="records")

@@ -1,18 +1,27 @@
-from fastapi import FastAPI
-from models.segmentation import get_clusters
-from services import product_score
-from services.assisstant import business_assistant
-from services.bundle import get_product_bundles
-from services.geo_analysis import geo_analysis
-from services.recommendation import recommend_stock
-from services.analytics import get_products_by_client
-from services.analytics import get_association_rules
-from utils.preprocessing import forecast_by_product, preprocess_forecast
+from fastapi import FastAPI,Body
+from fastapi.middleware.cors import CORSMiddleware
 from services.predict import get_sales_forecast, get_customer_prediction
-from services.analytics import get_top_products, get_customer_products, get_association_rules, forecast_by_product
-
+from models.segmentation import get_clusters
+from utils.preprocessing import preprocess_forecast
+from utils.preprocessing import forecast_by_product
+from services.basket_service import df_all, get_categories, get_delegations, get_basket_analysis, get_cooccurrence_analysis
+import pandas as pd
+from typing import List
+from pydantic import BaseModel
 app = FastAPI()
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,       # les origines autorisées
+    allow_credentials=True,
+    allow_methods=["*"],         # GET, POST, etc.
+    allow_headers=["*"],         # tous les headers
+)
+"""
 @app.get("/")
 def home():
     return {"message": "API running"}
@@ -33,45 +42,32 @@ def segmentation():
 def sales_total():
     df = preprocess_forecast()
     total = df["prix_total"].sum()
-    return {"total_sales": total} 
+    return {"total_sales": total}
+"""
+class ProductPairRequest(BaseModel):
+    produits: List[str]
 
-@app.get("/products/top")
-def top_products():
-    return get_top_products()
+@app.get("/categories")
+def categories_endpoint():
+    return get_categories(df_all)
 
-@app.get("/products/customer/{id}")
-def customer_products(id: int):
-    return get_customer_products(id)
+@app.get("/delegations")
+def delegations_endpoint():
+    return get_delegations(df_all)
 
-@app.get("/products/association")
-def association():
-    return get_association_rules()
+@app.get("/basket")
+def basket_endpoint(categorie: str = None, delegation: str = None, top_n: int = 5):
+    return get_basket_analysis(df_all, categorie, delegation, top_n)
+
+@app.post("/analyze-pair")
+def analyze_pair_endpoint(request: ProductPairRequest):
+    """
+    Analyse si deux produits sont souvent achetés ensemble
+    Attend: {"produits": ["produit1", "produit2"]}
+    Retourne: Pourcentage de confiance et recommandation de placement
+    """
+    return get_cooccurrence_analysis(df_all, request.produits)
 
 @app.get("/forecast/product")
 def forecast_product(name: str):
     return forecast_by_product(name)
-
-@app.get("/recommend/stock")
-def stock():
-    return recommend_stock()
-
-@app.get("/recommend/bundles")
-def bundles():
-    return get_product_bundles()
-@app.get("/products/score")
-def score():
-    return product_score()
-@app.get("/assistant/business")
-def assistant():
-    return business_assistant()
-@app.get("/analysis/geo")
-def geo():
-    return geo_analysis()
-
-@app.get("/association")
-def association():
-    return get_association_rules()
-
-@app.get("/products/client")
-def products_client(client_id: int):
-    return get_products_by_client(client_id)
