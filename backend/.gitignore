@@ -3,3 +3,4 @@ backend/data/
 venv/
 __pycache__/
 .env
+backend/models/*.pkl

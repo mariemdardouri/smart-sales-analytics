@@ -48,32 +48,39 @@ function BasketAnalysis() {
       });
   };
 
-  const handleAnalyzePair = () => {
+const handleAnalyzePair = () => {
     if (!product1Input.trim() || !product2Input.trim()) {
-      alert("Veuillez saisir les deux produits à analyser");
-      return;
+        alert("Veuillez saisir les deux produits à analyser");
+        return;
     }
     
     setLoading(true);
-    fetch("http://127.0.0.1:8000/analyze-pair", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ produits: [product1Input.trim(), product2Input.trim()] })
+    let url = `http://127.0.0.1:8000/analyze-pair`;
+    let body = { 
+        produits: [product1Input.trim(), product2Input.trim()],
+        categorie: selectedCategory || null,
+        delegation: selectedDelegation || null
+    };
+    
+    fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body)
     })
-      .then(res => res.json())
-      .then(data => {
-        setAnalysisResult(data);
-        setLoading(false);
-        setActiveTab("analyze");
-      })
-      .catch(err => {
-        console.error("Error analyzing pair:", err);
-        alert("Erreur lors de l'analyse");
-        setLoading(false);
-      });
-  };
+        .then(res => res.json())
+        .then(data => {
+            setAnalysisResult(data);
+            setLoading(false);
+            setActiveTab("analyze");
+        })
+        .catch(err => {
+            console.error("Error analyzing pair:", err);
+            alert("Erreur lors de l'analyse");
+            setLoading(false);
+        });
+};
 
   return (
     <div className="basket-analysis">
