@@ -15,7 +15,7 @@ from typing import Dict, List, Optional
 # Initialize the model
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.0-flash", 
-    api_key="***",
+    api_key="AIzaSyAq1Mi3jApDH7l0rBL1aAQBiVt5wQmM4B4",
     temperature=0.3,  # Réduire la température pour des réponses plus précises
     request_timeout=30,
     max_retries=2
