@@ -1,0 +1,158 @@
+/* 🌌 GLOBAL STYLE */
+.chatbot-circle {
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  width: 65px;
+  height: 65px;
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+.chatbot-circle:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* 💬 CHAT BOX (Glass effect) */
+.chatbot-box {
+  position: fixed;
+  bottom: 100px;
+  right: 25px;
+  width: 360px;
+  height: 480px;
+  backdrop-filter: blur(15px);
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+  overflow: hidden;
+  animation: fadeIn 0.3s ease;
+}
+
+/* ✨ animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px);}
+  to { opacity: 1; transform: translateY(0);}
+}
+
+/* 🔝 HEADER */
+.chatbot-header {
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  color: white;
+  padding: 12px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 💬 MESSAGES */
+.chatbot-messages {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 🧍 USER MESSAGE */
+.msg.user {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  padding: 10px 14px;
+  border-radius: 15px 15px 0 15px;
+  max-width: 75%;
+  font-size: 14px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* 🤖 BOT MESSAGE */
+.msg.bot {
+  align-self: flex-start;
+  background: #f1f5f9;
+  color: #111;
+  padding: 10px 14px;
+  border-radius: 15px 15px 15px 0;
+  max-width: 75%;
+  font-size: 14px;
+  white-space: pre-line; /* important for formatting */
+}
+
+/* ⏱ TIME */
+.msg-time {
+  font-size: 10px;
+  opacity: 0.6;
+  margin-top: 3px;
+  text-align: right;
+}
+
+/* ✨ Typing animation */
+.msg.bot::after {
+  content: "";
+}
+
+/* 💡 SUGGESTIONS */
+.suggestions {
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-top: 1px solid #eee;
+}
+
+.suggestions button {
+  background: linear-gradient(135deg, #e0edff, #dbeafe);
+  color: #1e40af;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.suggestions button:hover {
+  transform: scale(1.05);
+  background: #bfdbfe;
+}
+
+/* ⌨️ INPUT */
+.chatbot-input {
+  display: flex;
+  border-top: 1px solid #eee;
+  background: white;
+}
+
+.chatbot-input input {
+  flex: 1;
+  border: none;
+  padding: 10px;
+  outline: none;
+  font-size: 14px;
+}
+
+/* 🎤 + SEND BUTTON */
+.chatbot-input button {
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  color: white;
+  border: none;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.chatbot-input button:hover {
+  opacity: 0.9;
+}
