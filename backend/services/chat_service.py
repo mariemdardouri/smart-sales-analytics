@@ -1,4 +1,6 @@
 # chat_service.py
+import os
+from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from services.basket_service import (
@@ -12,10 +14,11 @@ import re
 import time
 from typing import Dict, List, Optional
 
+load_dotenv()
 # Initialize the model
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.0-flash", 
-    api_key="***",
+    api_key=os.getenv("GEMINI_API_KEY"),
     temperature=0.3,  # Réduire la température pour des réponses plus précises
     request_timeout=30,
     max_retries=2
@@ -141,9 +144,9 @@ def answer_top_products(question: str, filters: dict) -> str:
             
             response = "🏆 "
             if filters["categorie"]:
-                response += f"**Le produit le plus acheté dans la catégorie '{filters['categorie']}'"
+                response += f"**Le produit le plus acheté dans la catégorie {filters['categorie']}**"
             elif filters["delegation"]:
-                response += f"**Le produit le plus acheté à {filters['delegation']}"
+                response += f"**Le produit le plus acheté à {filters['delegation']}**"
             else:
                 response += f"**Le produit le plus acheté**"
             
@@ -348,14 +351,21 @@ def ask_chatbot(question: str) -> str:
     
     # Déterminer le type de question
     is_top_products = any(keyword in question_lower for keyword in [
-        "top produit", "plus acheté", "meilleur vente", "produit phare",
-        "best seller", "le plus vendu", "quel est le produit", 
-        "quel produit", "produit le plus"
+        "top", "produit", "produits", "plus acheté",
+        "meilleur", "best", "vendu"
     ])
     
     is_basket_analysis = any(keyword in question_lower for keyword in [
         "achetés ensemble", "co-occurrence", "souvent ensemble",
-        "ensemble", "avec", "pair", "paire", "panier"
+        "ensemble", "avec", "pair", "paire", "panier",
+        "achetés ensemble",
+        "achete ensemble",
+        "ensemble",
+        "avec",
+        "souvent ensemble",
+        "panier",
+        "association",
+        "combinaison"
     ])
     
     is_categories = any(keyword in question_lower for keyword in [
@@ -363,11 +373,11 @@ def ask_chatbot(question: str) -> str:
     ])
     
     # Répondre selon le type de question
-    if is_top_products:
-        return answer_top_products(question, filters)
-    
-    elif is_basket_analysis:
+    if is_basket_analysis:
         return answer_basket_analysis(question, filters)
+
+    elif is_top_products:
+        return answer_top_products(question, filters)
     
     elif is_categories:
         categories = get_categories(df_all)
@@ -390,6 +400,36 @@ def ask_chatbot(question: str) -> str:
         delegations = get_delegations(df_all)
         if any(delg.lower() in question_lower for delg in delegations):
             return answer_top_products(question, filters)
+        # 🔥 AUTO INSIGHTS TRIGGER
+        if any(word in question_lower for word in ["insight", "analyse globale", "résumé", "dashboard"]):
+            return generate_auto_insights()
         
         # Utiliser l'API Gemini pour les questions générales
-        return answer_general_question(question)
+        try:
+            return answer_general_question(question)
+        except:
+            return "⚠️ AI indisponible. Essayez:\n- Top produits\n- Analyse panier\n- Comparaison régions"
+    
+def generate_auto_insights():
+    try:
+        total_sales = len(df_all)
+
+        top_product = df_all["nom_produit"].value_counts().idxmax()
+        top_category = df_all["categorie"].value_counts().idxmax()
+        top_region = df_all["délégation"].value_counts().idxmax()
+
+        insights = f"""
+📊 **Insights automatiques:**
+
+• Produit le plus vendu: **{top_product}**
+• Catégorie dominante: **{top_category}**
+• Région la plus active: **{top_region}**
+• Nombre total de ventes: **{total_sales}**
+
+💡 Conseil: Mettez en avant **{top_product}** dans vos campagnes marketing.
+"""
+
+        return insights
+
+    except Exception as e:
+        return f"Erreur insights: {e}"

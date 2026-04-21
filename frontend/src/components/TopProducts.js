@@ -6,18 +6,26 @@ function TopProducts() {
 
   useEffect(() => {
     API.get("/products/top")
-      .then(res => setData(res.data))
+      .then(res => {
+        console.log(res.data); // 👈 DEBUG
+        setData(res.data);
+      })
       .catch(err => console.error(err));
   }, []);
 
   return (
-    <div>
+    <div className="card">
       <h2>🔥 Top Produits</h2>
-      {data.map((p, i) => (
-        <div key={i}>
-          {p.nom_produit} → {p.quantité_achetée}
-        </div>
-      ))}
+
+      {Array.isArray(data) ? (
+        data.map((p, i) => (
+          <div key={i}>
+            {p.nom_produit} — <strong>{p.quantité_achetée}</strong>
+          </div>
+        ))
+      ) : (
+        <p>Loading...</p>
+      )}
     </div>
   );
 }

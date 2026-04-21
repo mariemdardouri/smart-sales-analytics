@@ -12,7 +12,7 @@ function ClientProducts() {
   };
 
   return (
-    <div>
+    <div className="card">
       <h2>👤 Produits d’un client</h2>
 
       <input

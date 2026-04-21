@@ -11,7 +11,12 @@ function Prediction() {
     setLoading(true);
     try {
       const res = await API.get(`/forecast/product?name=${product}`);
-      setResult(res.data);
+      if (Array.isArray(res.data)) {
+        setResult(res.data);
+      } else {
+        alert(res.data.error || "Error");
+        setResult([]);
+      }
     } catch (err) {
       console.error(err);
       alert("Error fetching prediction");
