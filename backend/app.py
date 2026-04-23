@@ -3,7 +3,14 @@ import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from pydantic import BaseModel
-
+from services.sales_service import (
+    get_available_categories, 
+    get_available_delegations,
+    get_available_localites,
+    predict_sales,
+    get_model_metrics,
+    get_feature_importance
+)
 from services.predict import get_sales_forecast, get_customer_prediction
 from models.segmentation import get_clusters
 
@@ -326,3 +333,52 @@ def clients_delegation():
         .nunique()
         .to_dict()
     )
+
+
+
+@app.get("/sales/categories")
+async def sales_categories():
+    """Retourne la liste des catégories disponibles"""
+    return get_available_categories()
+
+@app.get("/sales/delegations")
+async def sales_delegations():
+    """Retourne la liste des délégations disponibles"""
+    return get_available_delegations()
+
+@app.get("/sales/localites")
+async def sales_localites(delegation: str = None):
+    """Retourne la liste des localités disponibles"""
+    return get_available_localites(delegation)
+
+@app.post("/sales/predict")
+async def sales_predict(request: dict):
+    """
+    Prédit le chiffre d'affaires
+    Body: {
+        "categories": ["cat1", "cat2"],
+        "delegation": "delegation",
+        "localite": "localite",
+        "month": 1
+    }
+    """
+    categories = request.get("categories", [])
+    delegation = request.get("delegation")
+    localite = request.get("localite")
+    month = request.get("month")
+    
+    if not categories:
+        return {"error": "Veuillez spécifier au moins une catégorie"}
+    
+    return predict_sales(categories, delegation, localite, month)
+
+@app.get("/sales/metrics")
+async def sales_metrics():
+    """Retourne les métriques du modèle"""
+    return get_model_metrics()
+
+@app.get("/sales/feature-importance")
+async def sales_feature_importance():
+    """Retourne l'importance des features"""
+    return get_feature_importance()
+

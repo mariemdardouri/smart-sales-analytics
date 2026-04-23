@@ -18,15 +18,13 @@ load_dotenv()
 # Initialize the model
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.0-flash", 
-
-    api_key=" 5edf85253f94733a080fc995908e49422a91139e",
-
     api_key=os.getenv("GEMINI_API_KEY"),
-
     temperature=0.3,  # Réduire la température pour des réponses plus précises
     request_timeout=30,
     max_retries=2
 )
+
+
 print("✅ Modèle Gemini initialisé.")
 
 # Variable pour stocker le contexte de la dernière conversation
