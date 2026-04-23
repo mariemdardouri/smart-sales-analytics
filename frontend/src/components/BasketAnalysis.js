@@ -230,17 +230,7 @@ const handleAnalyzePair = () => {
                   <span className="product-highlight">{analysisResult.produit2}</span>
                 </div>
                 
-                <div className="confidence-meter">
-                  <div className="confidence-label">
-                    Confiance: {analysisResult.confidence}%
-                  </div>
-                  <div className="confidence-bar">
-                    <div 
-                      className={`confidence-fill ${analysisResult.confidence >= 15 ? 'high' : analysisResult.confidence >= 5 ? 'medium' : 'low'}`}
-                      style={{ width: `${Math.min(analysisResult.confidence, 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
+         
                 
                 <div className="recommendation-box">
                   <p className="recommendation-text">{analysisResult.recommandation}</p>
@@ -253,15 +243,7 @@ const handleAnalyzePair = () => {
                   </div>
                 )}
                 
-                <div className="stats-details">
-                  <h4>Détails statistiques</h4>
-                  <ul>
-                    <li>Fréquence d'achat de "{analysisResult.produit1}": {analysisResult.frequence_produit1} fois</li>
-                    <li>Fréquence d'achat de "{analysisResult.produit2}": {analysisResult.frequence_produit2} fois</li>
-                    <li>Achetés ensemble: {analysisResult.frequence_ensemble} fois</li>
-                    <li>Probabilité d'achat ensemble: {analysisResult.confidence}%</li>
-                  </ul>
-                </div>
+               
               </div>
             </div>
           )}

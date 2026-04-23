@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import BasketAnalysis from "./components/BasketAnalysis";
 import Prediction from "./components/Prediction";
+import SalesPrediction from "./components/SalesPrediction"; // Nouveau composant
 import Dashboard from "./components/Dashboard";
 import Chatbot from "./components/Chatbot";
 import "./App.css";
@@ -24,7 +25,11 @@ function App() {
         </button>
 
         <button onClick={() => setPage("prediction")} className={page === "prediction" ? "active" : ""}>
-          📈 Prediction
+          📈 Prediction 1
+        </button>
+
+        <button onClick={() => setPage("sales")} className={page === "sales" ? "active" : ""}>
+          💰 Prediction 2 - Ventes
         </button>
       </aside>
 
@@ -33,7 +38,12 @@ function App() {
         
         {/* Topbar */}
         <header className="topbar">
-          <h1>{page.toUpperCase()}</h1>
+          <h1>
+            {page === "dashboard" && "DASHBOARD"}
+            {page === "basket" && "ANALYSE DE PANIER"}
+            {page === "prediction" && "PRÉDICTION 1 - COMPORTEMENT"}
+            {page === "sales" && "PRÉDICTION 2 - CHIFFRE D'AFFAIRES"}
+          </h1>
         </header>
 
         {/* Content */}
@@ -41,6 +51,7 @@ function App() {
           {page === "dashboard" && <Dashboard />}
           {page === "basket" && <BasketAnalysis />}
           {page === "prediction" && <Prediction />}
+          {page === "sales" && <SalesPrediction />}
         </div>
 
       </div>
