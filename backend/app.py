@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
+
 from services.sales_service import (
     get_available_categories, 
     get_available_delegations,
@@ -11,13 +12,11 @@ from services.sales_service import (
     get_model_metrics,
     get_feature_importance
 )
-from services.predict import get_sales_forecast, get_customer_prediction
+from services.predict import get_customer_prediction
 from models.segmentation import get_clusters
 
 from utils.preprocessing import (
     get_association_rules,
-    preprocess_forecast,
-    forecast_by_product,
     get_clean_df
 )
 
@@ -30,9 +29,15 @@ from services.basket_service import (
 )
 
 
-# =========================
+from services.location_service import (
+    get_available_categories as loc_get_categories,
+    get_all_regions,
+    get_best_region,
+    get_model_metrics as loc_get_model_metrics
+)
+
 # APP INIT
-# =========================
+
 app = FastAPI(title="Smart Sales Analytics API")
 
 app.add_middleware(
@@ -44,29 +49,17 @@ app.add_middleware(
 )
 
 
-# =========================
 # SINGLE SOURCE OF TRUTH
-# =========================
+
 def df():
     return get_clean_df()
 
 
-# =========================
 # BASIC ROUTES
-# =========================
+
 @app.get("/")
 def home():
     return {"message": "API running successfully"}
-
-
-@app.get("/forecast")
-def forecast():
-    return get_sales_forecast()
-
-
-@app.get("/forecast/product")
-def forecast_product(name: str):
-    return forecast_by_product(name)
 
 
 @app.get("/predict-customer")
@@ -79,15 +72,9 @@ def segmentation():
     return get_clusters()
 
 
-@app.get("/sales/total")
-def sales_total():
-    dff = preprocess_forecast()
-    return {"total_sales": float(dff["y"].sum())}
 
-
-# =========================
 # MODELS
-# =========================
+
 class ProductPairRequest(BaseModel):
     produits: List[str]
 
@@ -96,9 +83,9 @@ class ChatRequest(BaseModel):
     question: str
 
 
-# =========================
+
 # BASKET
-# =========================
+
 @app.get("/categories")
 def categories_endpoint():
     return get_categories(df())
@@ -130,9 +117,8 @@ def top_products():
     ]
 
 
-# =========================
 # CHAT
-# =========================
+
 try:
     from services.chat_service import ask_chatbot
     CHATBOT_AVAILABLE = True
@@ -147,9 +133,9 @@ def chat_endpoint(request: ChatRequest):
     return {"answer": ask_chatbot(request.question)}
 
 
-# =========================
+
 # ASSOCIATION RULES
-# =========================
+
 cached_rules = get_association_rules()
 
 
@@ -158,9 +144,9 @@ def association():
     return cached_rules
 
 
-# =========================================================
-# PRODUIT ANALYTICS (FIXED)
-# =========================================================
+
+# PRODUIT ANALYTICS (UNCHANGED)
+
 @app.get("/analytics/produit/kpi")
 def produit_kpi():
     dff = df()
@@ -172,7 +158,6 @@ def produit_kpi():
             )["prix_total"].sum().sum(),
             2
         ),
-
         "nb_produits": dff["nom_produit"].nunique(),
         "nb_marques": dff["marque"].nunique()
     }
@@ -186,7 +171,7 @@ def ca_produit():
         dff.groupby("nom_produit")["prix_total"]
         .sum()
         .sort_values(ascending=False)
-        .head(10)   # Power BI visual top N default behavior
+        .head(10)
     )
 
     return {
@@ -219,9 +204,9 @@ def ca_marque():
     }
 
 
-# =========================================================
+
 # TEMPS
-# =========================================================
+
 @app.get("/analytics/temps/kpi")
 def temps_kpi():
     dff = df()
@@ -259,7 +244,6 @@ def ca_mois():
     }
 
 
-
 @app.get("/analytics/temps/saison")
 def ca_saison():
     dff = df()
@@ -276,9 +260,9 @@ def ca_saison():
     return dff.groupby("saison")["prix_total"].sum().to_dict()
 
 
-# =========================================================
-# GEO (FIXED)
-# =========================================================
+
+# GEO
+
 @app.get("/analytics/geo/kpi")
 def geo_kpi():
     dff = df()
@@ -306,7 +290,6 @@ def ca_delegation():
     return data.to_dict()
 
 
-
 @app.get("/analytics/geo/ca-localite")
 def ca_localite():
     dff = df()
@@ -323,7 +306,6 @@ def ca_localite():
     return data.to_dict()
 
 
-
 @app.get("/analytics/geo/clients-delegation")
 def clients_delegation():
     dff = df()
@@ -335,50 +317,75 @@ def clients_delegation():
     )
 
 
+# SALES MODEL
 
 @app.get("/sales/categories")
 async def sales_categories():
-    """Retourne la liste des catégories disponibles"""
     return get_available_categories()
 
 @app.get("/sales/delegations")
 async def sales_delegations():
-    """Retourne la liste des délégations disponibles"""
     return get_available_delegations()
 
 @app.get("/sales/localites")
 async def sales_localites(delegation: str = None):
-    """Retourne la liste des localités disponibles"""
     return get_available_localites(delegation)
 
 @app.post("/sales/predict")
 async def sales_predict(request: dict):
-    """
-    Prédit le chiffre d'affaires
-    Body: {
-        "categories": ["cat1", "cat2"],
-        "delegation": "delegation",
-        "localite": "localite",
-        "month": 1
-    }
-    """
+
     categories = request.get("categories", [])
     delegation = request.get("delegation")
     localite = request.get("localite")
     month = request.get("month")
-    
+
     if not categories:
         return {"error": "Veuillez spécifier au moins une catégorie"}
-    
+
     return predict_sales(categories, delegation, localite, month)
+
 
 @app.get("/sales/metrics")
 async def sales_metrics():
-    """Retourne les métriques du modèle"""
     return get_model_metrics()
 
 @app.get("/sales/feature-importance")
 async def sales_feature_importance():
-    """Retourne l'importance des features"""
     return get_feature_importance()
 
+
+
+# LOCATION 
+
+
+class LocationRequest(BaseModel):
+    category: Optional[str] = None
+    brand: Optional[str] = None
+    product_name: Optional[str] = None
+    top_n: int = 5
+
+
+@app.get("/location/categories")
+def location_categories():
+    return loc_get_categories()
+
+
+@app.get("/location/regions")
+def location_regions():
+    return get_all_regions()
+
+
+@app.post("/location/predict")
+def location_predict(request: LocationRequest):
+
+    return get_best_region(
+        category=request.category,
+        brand=request.brand,
+        product_name=request.product_name,
+        top_n=request.top_n
+    )
+
+
+@app.get("/location/metrics")
+def location_metrics():
+    return loc_get_model_metrics()
