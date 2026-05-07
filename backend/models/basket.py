@@ -18,9 +18,6 @@ class BasketRecommender:
         self.model_path = model_path
         self.df_all = None
 
-    # ------------------------------------------------------------------
-    # ENTRAÎNEMENT
-    # ------------------------------------------------------------------
     def train(self, df):
         print("Début de l'entraînement du modèle de co-occurrences...")
 
@@ -29,9 +26,6 @@ class BasketRecommender:
         df["nom_produit"] = df["nom_produit"].fillna("").astype(str).str.strip()
         df = df[df["nom_produit"] != ""]
 
-        # ── Clé de transaction ─────────────────────────────────────────
-        # On s'assure que la colonne transaction existe déjà
-        # (construite dans basket_service.py), sinon on la crée ici
         if "transaction" not in df.columns:
             df["date_dachat"] = pd.to_datetime(df["date_dachat"], errors="coerce")
             df["transaction"] = (
@@ -43,7 +37,6 @@ class BasketRecommender:
         self.product_names = sorted(df["nom_produit"].unique().tolist())
         print(f"Produits uniques : {len(self.product_names)}")
 
-        # ── Diagnostic : taille des transactions ──────────────────────
         trans_sizes = df.groupby("transaction")["nom_produit"].count()
         print(f"\n📊 Diagnostic transactions :")
         print(f"   Nombre total de transactions : {len(trans_sizes)}")
@@ -59,7 +52,6 @@ class BasketRecommender:
             print("   produit → la clé client_id+date est probablement trop granulaire.")
             print("   Essayez de regrouper par client_id seul ou par semaine.")
 
-        # ── Calcul des co-occurrences ──────────────────────────────────
         transactions = df.groupby("transaction")["nom_produit"].apply(list)
 
         pair_counts = Counter()
@@ -85,7 +77,6 @@ class BasketRecommender:
         print(f"\nPaires uniques   : {len(self.pair_frequencies)}")
         print(f"Transactions     : {self.total_transactions}")
 
-        # ── Top 10 paires pour vérification ───────────────────────────
         print("\n🔝 Top 10 paires les plus fréquentes :")
         top10 = Counter(self.pair_frequencies).most_common(10)
         for (p1, p2), freq in top10:
@@ -99,26 +90,21 @@ class BasketRecommender:
         self.save_model()
         return self
 
-    # ------------------------------------------------------------------
-    # RECHERCHE D'UN PRODUIT
-    # ------------------------------------------------------------------
     def find_product_match(self, product_name):
         if not product_name or not self.product_names:
             return None
 
         name_lower = product_name.lower().strip()
 
-        # 1. Correspondance exacte
+
         for p in self.product_names:
             if p.lower() == name_lower:
                 return p
 
-        # 2. Le produit commence par la recherche
         for p in self.product_names:
             if p.lower().startswith(name_lower):
                 return p
 
-        # 3. Tous les mots de la recherche présents dans le produit
         words = re.findall(r'\b\w+\b', name_lower)
         if words:
             best = None
@@ -132,7 +118,6 @@ class BasketRecommender:
             if best_score > 0:
                 return best
 
-        # 4. Sous-chaîne
         if len(name_lower) >= 4:
             for p in self.product_names:
                 if name_lower in p.lower():
@@ -140,9 +125,6 @@ class BasketRecommender:
 
         return None
 
-    # ------------------------------------------------------------------
-    # ANALYSE D'UNE PAIRE
-    # ------------------------------------------------------------------
     def analyze_pair(self, product1: str, product2: str,
                      categorie: str = None, delegation: str = None) -> dict:
 
@@ -168,7 +150,6 @@ class BasketRecommender:
                 "details": {"conseil": "Vérifiez les noms des produits."},
             }
 
-        # ── Filtrage optionnel ─────────────────────────────────────────
         df_f = self.df_all.copy()
 
         if categorie and "categorie" in df_f.columns:
@@ -177,7 +158,7 @@ class BasketRecommender:
         if delegation and "délégation" in df_f.columns:
             df_f = df_f[df_f["délégation"] == delegation]
 
-        # S'assurer que la colonne transaction existe
+
         if "transaction" not in df_f.columns:
             df_f["date_dachat"] = pd.to_datetime(df_f["date_dachat"], errors="coerce")
             df_f["transaction"] = (
@@ -186,7 +167,7 @@ class BasketRecommender:
                 + df_f["date_dachat"].dt.strftime("%Y-%m-%d")
             )
 
-        # ── Calcul des fréquences sur le sous-ensemble filtré ──────────
+
         trans_prod1 = set(df_f[df_f["nom_produit"] == matched1]["transaction"])
         trans_prod2 = set(df_f[df_f["nom_produit"] == matched2]["transaction"])
 
@@ -198,23 +179,17 @@ class BasketRecommender:
         confidence = round((freq_together / freq1) * 100, 1) if freq1 > 0 else 0.0
         confidence_rev = round((freq_together / freq2) * 100, 1) if freq2 > 0 else 0.0
 
-        # Lift : mesure si les deux produits sont achetés PLUS souvent
-        # ensemble qu'attendu par hasard (lift > 1 = association réelle)
         expected = (freq1 * freq2) / total if total > 0 else 0
         lift = round(freq_together / expected, 2) if expected > 0 else 0.0
 
-        # ── Score composite ────────────────────────────────────────────
-        # On prend la confiance MAX (produit le moins fréquent en dénominateur)
-        # et on la multiplie par le lift pour ne garder que les vraies associations
+
         conf_max = max(confidence, confidence_rev)
 
-        # Score = confiance_max (%) × lift × log(1 + freq_ensemble)
-        # Un lift < 1 → association négative → score proche de 0
-        # Un lift ≥ 1 + conf_max élevée → bon score
+
+
         if lift >= 1:
             score = round(conf_max * lift * np.log1p(freq_together), 2)
         else:
-            # Pénaliser les associations négatives (lift < 1)
             score = round(conf_max * lift, 2)
 
         print(f"\n🔍 Analyse : {matched1} + {matched2}")
@@ -222,7 +197,6 @@ class BasketRecommender:
         print(f"   conf(1→2)={confidence}%, conf(2→1)={confidence_rev}%")
         print(f"   lift={lift}, score={score}")
 
-        # ── Recommandation basée sur le score ──────────────────────────
         if score >= 50:
             ensemble = True
             recommandation = (
@@ -273,9 +247,6 @@ class BasketRecommender:
             "details": {"conseil": conseil},
         }
 
-    # ------------------------------------------------------------------
-    # RECOMMANDATIONS PAR CO-OCCURRENCE
-    # ------------------------------------------------------------------
     def get_cooccurrence_recommendations(self, product, top_n=5, min_confidence=5):
         matched = self.find_product_match(product)
         if not matched or matched not in self.product_support:
@@ -305,13 +276,10 @@ class BasketRecommender:
                 "lift": lift,
             })
 
-        results.sort(key=lambda x: x["lift"], reverse=True)  # Trier par lift
+        results.sort(key=lambda x: x["lift"], reverse=True) 
         filtered = [r for r in results if r["confiance"] >= min_confidence]
         return filtered[:top_n] if filtered else results[:top_n]
 
-    # ------------------------------------------------------------------
-    # PERSISTANCE
-    # ------------------------------------------------------------------
     def save_model(self):
         try:
             model_data = {

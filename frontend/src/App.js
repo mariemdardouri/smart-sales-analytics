@@ -16,16 +16,16 @@ function App() {
       <aside className="sidebar">
         <h2 className="logo">Smart Sales Analytics</h2>
         <button onClick={() => setPage("dashboard")} className={page === "dashboard" ? "active" : ""}>
-          📊 Dashboard
+          📊 Tableau de Bord
         </button>
         <button onClick={() => setPage("basket")} className={page === "basket" ? "active" : ""}>
-          🛒 Basket
+          🛒 Analyse De Panier
         </button>
         <button onClick={() => setPage("prediction")} className={page === "prediction" ? "active" : ""}>
-          📈 Prediction 1
+          📈 Prediction Produits
         </button>
         <button onClick={() => setPage("sales")} className={page === "sales" ? "active" : ""}>
-          💰 Prediction 2 - Ventes
+          💰 Prediction Ventes
         </button>
         <button onClick={() => setPage("location")} className={page === "location" ? "active" : ""}>
           📍 Où vendre ?
@@ -35,7 +35,7 @@ function App() {
       <div className="main">
         <header className="topbar">
           <h1>
-            {page === "dashboard" && "DASHBOARD"}
+            {page === "dashboard" && "Tableau de Bord"}
             {page === "basket" && "ANALYSE DE PANIER"}
             {page === "prediction" && "PRÉDICTION - PRODUITS ASSOCIÉS"}
             {page === "sales" && "PRÉDICTION - CHIFFRE D'AFFAIRES"}

@@ -1,72 +1,413 @@
-.prediction-container {
-  padding: 30px;
-  font-family: Arial, sans-serif;
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+/* ── ROOT ── */
+.pred-root {
+  min-height: 100vh;
+  background: #0f172a;
+  padding: 40px 32px;
+  font-family: 'DM Sans', sans-serif;
+  color: #f8fafc;
 }
 
-.prediction-title {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.prediction-input-container {
+/* ── HEADER ── */
+.pred-header {
   display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.pred-header-icon {
+  font-size: 2.2rem;
+  background: rgba(46,117,182,0.15);
+  border: 1px solid rgba(46,117,182,0.3);
+  border-radius: 14px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
   justify-content: center;
+}
+
+.pred-title {
+  font-size: 1.9rem;
+  font-weight: 700;
+  margin: 0;
+  color: #f1f5f9;
+  letter-spacing: -0.03em;
+}
+
+.pred-subtitle {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.92rem;
+  font-weight: 400;
+}
+
+/* ── SEARCH ── */
+.pred-search-wrap {
+  position: relative;
+  max-width: 640px;
+  margin: 0 auto 36px;
+}
+
+.pred-search-box {
+  display: flex;
+  align-items: center;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  padding: 6px 6px 6px 16px;
   gap: 10px;
-  margin-bottom: 25px;
+  transition: border-color 0.2s;
 }
 
-.prediction-input {
-  padding: 10px;
-  width: 250px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  outline: none;
+.pred-search-box:focus-within {
+  border-color: #2e75b6;
+  box-shadow: 0 0 0 3px rgba(46,117,182,0.12);
 }
 
-.prediction-button {
-  padding: 10px 20px;
+.pred-search-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.pred-input {
+  flex: 1;
+  background: transparent;
   border: none;
-  border-radius: 8px;
-  background-color: #007bff;
+  outline: none;
+  color: #f1f5f9;
+  font-size: 0.97rem;
+  font-family: 'DM Sans', sans-serif;
+  padding: 8px 0;
+}
+
+.pred-input::placeholder {
+  color: #475569;
+}
+
+.pred-btn {
+  background: #2e75b6;
   color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
   cursor: pointer;
-  transition: 0.3s;
+  transition: background 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
-.prediction-button:hover {
-  background-color: #0056b3;
+.pred-btn:hover:not(:disabled) {
+  background: #1f5a96;
+  transform: translateY(-1px);
 }
 
-.loading {
+.pred-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* spinner */
+.pred-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* suggestions */
+.pred-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  z-index: 100;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+.pred-suggestion-item {
+  padding: 11px 16px;
+  cursor: pointer;
+  color: #cbd5e1;
+  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.15s;
+}
+
+.pred-suggestion-item:hover {
+  background: rgba(46,117,182,0.15);
+  color: #f1f5f9;
+}
+
+.sugg-icon { font-size: 0.9rem; }
+
+/* ── ERROR ── */
+.pred-error {
+  max-width: 640px;
+  margin: 0 auto 20px;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 10px;
+  padding: 14px 18px;
+  color: #fca5a5;
+  font-size: 0.92rem;
+}
+
+/* ── LOADING ── */
+.pred-loading {
   text-align: center;
+  padding: 40px;
+  color: #64748b;
 }
 
-.prediction-results {
+.pred-loading-bar {
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #2e75b6, #f59e0b, transparent);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+  max-width: 300px;
+  animation: shimmer 1.5s infinite;
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── RESULTS ── */
+.pred-results {
+  animation: fadeUp 0.4s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pred-product-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(46,117,182,0.1);
+  border: 1px solid rgba(46,117,182,0.25);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.88rem;
+  color: #93c5fd;
+  margin-bottom: 24px;
+  text-transform: capitalize;
+}
+
+.badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2e75b6;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── FORECAST CARDS ── */
+.pred-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.pred-card {
+  background: #1e293b;
+  border: 1px solid #1e3a5f;
+  border-radius: 14px;
+  padding: 22px 20px;
+  animation: fadeUp 0.4s ease both;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pred-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+}
+
+.pred-card-month {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.pred-card-prob {
+  font-size: 2.4rem;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.pred-card-bar-track {
+  height: 5px;
+  background: #0f172a;
+  border-radius: 3px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.pred-card-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+}
+
+.pred-card-label {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.pred-card-value {
+  font-size: 0.82rem;
+  color: #475569;
+  border-top: 1px solid #0f172a;
+  padding-top: 10px;
+}
+
+.pred-card-value strong {
+  color: #94a3b8;
+}
+
+/* ── CHART ── */
+.pred-chart-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  padding: 24px 24px 20px;
+}
+
+.pred-chart-title {
+  margin: 0 0 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.pred-chart-inner {
+  height: 280px;
+}
+
+/* ── EMPTY STATE ── */
+.pred-empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: #475569;
+}
+
+.pred-empty-icon {
+  font-size: 3.5rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.pred-empty p {
+  font-size: 1rem;
+  margin-bottom: 24px;
+}
+
+.pred-hints {
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 15px;
+  gap: 10px;
 }
 
-.prediction-card {
-  background: white;
-  padding: 15px;
-  border-radius: 10px;
-  min-width: 180px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+.pred-hint-chip {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: capitalize;
 }
 
-.high {
-  color: green;
-  font-weight: bold;
+.pred-hint-chip:hover {
+  background: rgba(46,117,182,0.15);
+  border-color: #2e75b6;
+  color: #93c5fd;
+  transform: translateY(-1px);
 }
 
-.medium {
-  color: orange;
-  font-weight: bold;
+/* ── RESPONSIVE ── */
+@media (max-width: 700px) {
+  .pred-root { padding: 20px 16px; }
+  .pred-cards { grid-template-columns: 1fr; }
+  .pred-chart-inner { height: 220px; }
 }
 
-.low {
-  color: red;
-  font-weight: bold;
+/* ── CONTROLS ── */
+.pred-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px auto 30px;
+  justify-content: center;
+}
+
+.pred-controls span {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.pred-controls button {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pred-controls button:hover {
+  border-color: #2e75b6;
+  color: #93c5fd;
+}
+
+.pred-controls button.active {
+  background: #2e75b6;
+  color: white;
+  border-color: #2e75b6;
 }

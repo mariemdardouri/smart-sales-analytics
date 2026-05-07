@@ -1,22 +1,18 @@
 from fastapi import FastAPI
 import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Optional
+from typing import List,Optional
 from pydantic import BaseModel
+import models.xgboost_forecast as xgb_model
+from models.prediction_model import predict_future
 
-from services.sales_service import (
-    get_available_categories, 
-    get_available_delegations,
-    get_available_localites,
-    predict_sales,
-    get_model_metrics,
-    get_feature_importance
-)
-from services.predict import get_customer_prediction
+from services.predict import get_sales_forecast, get_customer_prediction,forecast_by_product
 from models.segmentation import get_clusters
 
 from utils.preprocessing import (
     get_association_rules,
+    get_dim_produit,
+    preprocess_forecast,
     get_clean_df
 )
 
@@ -29,6 +25,15 @@ from services.basket_service import (
     get_placement_recommendations
 )
 
+from services.sales_service import (
+    get_available_categories, 
+    get_available_delegations,
+    get_available_localites,
+    predict_sales,
+    get_model_metrics,
+    get_feature_importance
+)
+
 
 from services.location_service import (
     get_available_categories as loc_get_categories,
@@ -37,7 +42,6 @@ from services.location_service import (
     get_model_metrics as loc_get_model_metrics
 )
 
-# APP INIT
 
 app = FastAPI(title="Smart Sales Analytics API")
 
@@ -49,18 +53,70 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# SINGLE SOURCE OF TRUTH
-
 def df():
     return get_clean_df()
 
 
-# BASIC ROUTES
-
 @app.get("/")
 def home():
     return {"message": "API running successfully"}
+
+
+@app.get("/forecast")
+def forecast(periods: int = 6):
+    return get_sales_forecast(periods)
+
+@app.get("/forecast/product")
+def forecast_product(name: str, periods: int = 3, force_retrain: bool = False):
+    return forecast_by_product(name, periods, force_retrain)
+@app.get("/forecast/product-prophet")
+def prophet_product(name: str, periods: int = 3):
+
+    df = get_clean_df()
+
+    df = df[df["nom_produit"].str.lower().str.contains(name.lower(), na=False)]
+
+    if df.empty:
+        return {"error": "Produit non trouvé"}
+
+    df["date_dachat"] = pd.to_datetime(df["date_dachat"])
+
+    df_month = (
+        df.groupby(pd.Grouper(key="date_dachat", freq="MS"))["ca_calc"]
+        .sum()
+        .reset_index()
+        .rename(columns={"date_dachat": "ds", "ca_calc": "y"})
+    )
+
+    return predict_future(df_month, df_key=f"prophet_{name}", periods=periods)
+
+@app.get("/forecast/product-xgb")
+def xgb_product(name: str, periods: int = 3):
+    df = get_clean_df()
+    df = df[df["nom_produit"].str.lower() == name.lower()]
+
+    if df.empty:
+        return {"error": "Produit non trouvé"}
+
+    df["date_dachat"] = pd.to_datetime(df["date_dachat"])
+
+    df_month = (
+        df.groupby(pd.Grouper(key="date_dachat", freq="MS"))["ca_calc"]
+        .sum()
+        .reset_index()
+        .rename(columns={"date_dachat": "ds", "ca_calc": "y"})
+    )
+
+    return xgb_model.predict_future_xgb(df_month, periods=periods)
+
+@app.get("/products/names")
+def product_names(q: str = ""):
+    dff = df()
+    names = dff["nom_produit"].dropna().unique().tolist()
+    if q:
+        names = [n for n in names if q.lower() in n.lower()]
+    return sorted(names)[:20]
+ 
 
 
 @app.get("/predict-customer")
@@ -73,8 +129,10 @@ def segmentation():
     return get_clusters()
 
 
-
-# MODELS
+@app.get("/sales/total")
+def sales_total():
+    dff = preprocess_forecast()
+    return {"total_sales": float(dff["y"].sum())}
 
 class ProductPairRequest(BaseModel):
     produits: List[str]
@@ -82,10 +140,6 @@ class ProductPairRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str
-
-
-
-# BASKET
 
 @app.get("/categories")
 def categories_endpoint():
@@ -117,9 +171,6 @@ def top_products():
         for k, v in top.items()
     ]
 
-
-# CHAT
-
 try:
     from services.chat_service import ask_chatbot
     CHATBOT_AVAILABLE = True
@@ -133,10 +184,6 @@ def chat_endpoint(request: ChatRequest):
         return {"answer": "Chatbot non disponible"}
     return {"answer": ask_chatbot(request.question)}
 
-
-
-# ASSOCIATION RULES
-
 cached_rules = get_association_rules()
 
 
@@ -144,78 +191,48 @@ cached_rules = get_association_rules()
 def association():
     return cached_rules
 
-
-
-# PRODUIT ANALYTICS (UNCHANGED)
-
 @app.get("/analytics/produit/kpi")
 def produit_kpi():
     dff = df()
-
+    dim = get_dim_produit()
     return {
-        "ca_total": round(
-            dff.groupby(
-                ["client_id", "nom_produit", "date_dachat"]
-            )["prix_total"].sum().sum(),
-            2
-        ),
-        "nb_produits": dff["nom_produit"].nunique(),
-        "nb_marques": dff["marque"].nunique()
+        "ca_total":    round(float(dff["ca_calc"].sum()), 2),  
+        "nb_produits": int(dim["nom_produit"].nunique()),      
+        "nb_marques":  int(dim["marque"].nunique())           
     }
-
 
 @app.get("/analytics/produit/ca-produit")
 def ca_produit():
     dff = df()
-
-    data = (
-        dff.groupby("nom_produit")["prix_total"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(10)
-    )
-
-    return {
-        "labels": data.index.tolist(),
-        "values": data.values.tolist()
-    }
+    data = dff.groupby("nom_produit")["ca_calc"].sum().sort_values(ascending=False).head(10)
+    return {"labels": data.index.tolist(), "values": data.values.tolist()}
 
 
 @app.get("/analytics/produit/ca-categorie")
 def ca_categorie():
     dff = df()
-    return dff.groupby("categorie")["prix_total"].sum().to_dict()
+    return dff.groupby("categorie")["ca_calc"].sum().to_dict()
 
 
 @app.get("/analytics/produit/prix-moyen-categorie")
 def prix_moyen():
     dff = df()
-    return dff.groupby("categorie")["prix_total"].mean().to_dict()
-
+    return dff.groupby("categorie")["ca_calc"].mean().to_dict()
 
 @app.get("/analytics/produit/ca-marque")
 def ca_marque():
     dff = df()
+    data = dff.groupby("marque")["ca_calc"].sum()
+    return {"labels": data.index.tolist(), "values": data.values.tolist()}
 
-    data = dff.groupby("marque")["prix_total"].sum()
-
-    return {
-        "labels": data.index.tolist(),
-        "values": data.values.tolist()
-    }
-
-
-
-# TEMPS
 
 @app.get("/analytics/temps/kpi")
 def temps_kpi():
     dff = df()
-
     return {
-        "ca_total": round(float(dff["prix_total"].sum()), 2),
+        "ca_total":        round(float(dff["ca_calc"].sum()), 2),
         "nb_transactions": int(len(dff)),
-        "panier_moyen": round(float(dff["prix_total"].mean()), 2)
+        "panier_moyen":    round(float(dff["ca_calc"].mean()), 2) 
     }
 
 
@@ -224,45 +241,27 @@ def ca_trimestre():
     dff = df()
     dff["date_dachat"] = pd.to_datetime(dff["date_dachat"])
     dff["trimestre"] = dff["date_dachat"].dt.quarter
-
-    return dff.groupby("trimestre")["prix_total"].sum().to_dict()
+    return dff.groupby("trimestre")["ca_calc"].sum().to_dict()
 
 
 @app.get("/analytics/temps/mois")
 def ca_mois():
     dff = df()
-
     dff["date_dachat"] = pd.to_datetime(dff["date_dachat"])
-
-    data = (
-        dff.groupby(dff["date_dachat"].dt.to_period("M"))["prix_total"]
-        .sum()
-    )
-
-    return {
-        "labels": data.index.astype(str).tolist(),
-        "values": data.values.tolist()
-    }
-
+    data = dff.groupby(dff["date_dachat"].dt.to_period("M"))["ca_calc"].sum()
+    return {"labels": data.index.astype(str).tolist(), "values": data.values.tolist()}
 
 @app.get("/analytics/temps/saison")
 def ca_saison():
     dff = df()
-
     def season(m):
-        if m in [12, 1, 2]: return "Hiver"
-        if m in [3, 4, 5]: return "Printemps"
-        if m in [6, 7, 8]: return "Été"
+        if m in [12,1,2]: return "Hiver"
+        if m in [3,4,5]: return "Printemps"
+        if m in [6,7,8]: return "Été"
         return "Automne"
-
     dff["date_dachat"] = pd.to_datetime(dff["date_dachat"])
     dff["saison"] = dff["date_dachat"].dt.month.apply(season)
-
-    return dff.groupby("saison")["prix_total"].sum().to_dict()
-
-
-
-# GEO
+    return dff.groupby("saison")["ca_calc"].sum().to_dict()
 
 @app.get("/analytics/geo/kpi")
 def geo_kpi():
@@ -277,35 +276,17 @@ def geo_kpi():
 
 @app.get("/analytics/geo/ca-delegation")
 def ca_delegation():
-    dff = df()
-
-    dff = dff.dropna(subset=["délégation"])
-
-    data = (
-        dff.groupby("délégation")["prix_total"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(10)
-    )
-
+    dff = df().dropna(subset=["délégation"])
+    data = dff.groupby("délégation")["ca_calc"].sum().sort_values(ascending=False).head(10)
     return data.to_dict()
+
 
 
 @app.get("/analytics/geo/ca-localite")
 def ca_localite():
-    dff = df()
-
-    dff = dff.dropna(subset=["localité"])
-
-    data = (
-        dff.groupby("localité")["prix_total"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(10)
-    )
-
+    dff = df().dropna(subset=["localité"])
+    data = dff.groupby("localité")["ca_calc"].sum().sort_values(ascending=False).head(10)
     return data.to_dict()
-
 
 @app.get("/analytics/geo/clients-delegation")
 def clients_delegation():
@@ -318,7 +299,6 @@ def clients_delegation():
     )
 
 
-# SALES MODEL
 
 @app.get("/sales/categories")
 async def sales_categories():
@@ -355,8 +335,6 @@ async def sales_feature_importance():
     return get_feature_importance()
 
 
-
-# LOCATION 
 
 
 class LocationRequest(BaseModel):

@@ -5,7 +5,7 @@ from mlxtend.frequent_patterns import apriori, association_rules
 
 def load_data():
     df = pd.read_csv(
-        "C:/Users/HP/Desktop/ACHAT_NETTOYE_final.csv",
+        "C:/Users/mariem/Documents/smart-sales-analytics/backend/data/ACHAT_NETTOYE_V2.csv",
         sep=";",
         encoding="utf-8-sig",
         on_bad_lines="skip"
@@ -24,34 +24,29 @@ def load_data():
 def build_powerbi_model():
     df = load_data()
 
-    # types
     df["prix_total"]       = pd.to_numeric(df["prix_total"],       errors="coerce")
     df["quantité_achetée"] = pd.to_numeric(df["quantité_achetée"], errors="coerce")
     df["prix_unitaire"]    = pd.to_numeric(df["prix_unitaire"],     errors="coerce")
 
-    # drop missing keys
     df = df.dropna(subset=["prix_total", "client_id", "date_dachat"])
     df = df[df["prix_total"] > 0]
     df = df[df["quantité_achetée"].notna()]
-    df = df[df["prix_unitaire"].notna()]        # ← needed for CA recalc
-    df = df[df["prix_unitaire"] > 0]            # ← needed for CA recalc
+    df = df[df["prix_unitaire"].notna()]
+    df = df[df["prix_unitaire"] > 0]    
 
-    # dates
     df["date_dachat"] = pd.to_datetime(df["date_dachat"], dayfirst=True, errors="coerce")
     df = df.dropna(subset=["date_dachat"])
 
-    # text normalize
     for col in ["nom_produit", "marque", "categorie"]:
         df[col] = df[col].astype(str).str.strip().str.lower()
 
     df["client_id"] = df["client_id"].astype(str).str.strip()
 
-    # drop unknowns
+
     NULLISH = {"nan", "none", "", "unknown", "inconnu", "n/a", "na"}
     for col in ["nom_produit", "marque", "categorie"]:
         df = df[~df[col].isin(NULLISH)]
 
-    # deduplicate
     df = df.drop_duplicates(subset=[
         "client_id",
         "date_dachat",
@@ -60,21 +55,12 @@ def build_powerbi_model():
         "quantité_achetée"
     ])
 
-    # ── KEY FIX 1: recalculate CA like Power BI ──────────────
-    # Power BI: Chiffre_Affaires = SUMX(Quantite * PrixUnitaire)
     df["ca_calc"] = df["quantité_achetée"] * df["prix_unitaire"]
-    # ─────────────────────────────────────────────────────────
 
-    # ── KEY FIX 2: build dimension table like Power BI ───────
-    # DimProduit_v2 = one unique row per nom_produit
     dim_produit = df.drop_duplicates(subset=["produit_acheté"])[
         ["produit_acheté", "nom_produit", "marque", "categorie"]
     ]
-    # ─────────────────────────────────────────────────────────
 
-    # ── FIX: filter facts to only rows matching DimProduit_v2 ──────
-    # Power BI's star schema does an inner join between FactVentes
-    # and DimProduit — rows with no match are excluded from CA
     valid_produits = dim_produit["produit_acheté"].unique()
     df = df[df["produit_acheté"].isin(valid_produits)]
     df["ca_calc"] = df["quantité_achetée"] * df["prix_unitaire"]
@@ -83,7 +69,7 @@ def build_powerbi_model():
     print("✅ NB PRODUITS  :", dim_produit["nom_produit"].nunique())
     print("✅ NB MARQUES   :", dim_produit["marque"].nunique())
 
-    return df, dim_produit   # ← return both
+    return df, dim_produit  
 
 df_cached, dim_produit_cached = build_powerbi_model()
 
@@ -94,20 +80,25 @@ def get_clean_df():
 def get_dim_produit():
     return dim_produit_cached.copy()
 
-# ── FORECAST PREP ─────────────────────────────────────────────
-def preprocess_forecast():
+def preprocess_forecast(product_name=None):
     df = get_clean_df()
     df["date_dachat"] = pd.to_datetime(df["date_dachat"])
+
+    if product_name:
+        df = df[df["nom_produit"].str.lower() == product_name.lower()]
+
     df_month = (
-        df.groupby(pd.Grouper(key="date_dachat", freq="MS"))["ca_calc"]  # ← fix
+        df.groupby(pd.Grouper(key="date_dachat", freq="MS"))["ca_calc"]
         .sum()
         .reset_index()
-        .rename(columns={"date_dachat": "ds", "ca_calc": "y"})           # ← fix
+        .rename(columns={
+            "date_dachat": "ds",
+            "ca_calc": "y"
+        })
     )
+
     return df_month
 
-
-# ── CUSTOMER PREP ─────────────────────────────────────────────
 def preprocess_customer():
     df = get_clean_df()
     client = df.groupby("client_id").agg(
@@ -118,8 +109,6 @@ def preprocess_customer():
     client["HighValue"]    = (client["prix_total"] > client["prix_total"].median()).astype(int)
     return client
 
-
-# ── ASSOCIATION RULES ─────────────────────────────────────────
 def get_association_rules():
     df = get_clean_df()
     basket = df.pivot_table(

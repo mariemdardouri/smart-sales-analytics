@@ -2,17 +2,16 @@ from utils.preprocessing import load_data
 from models.sales_modele_v2 import SalesPredictorV2
 import pandas as pd
 
-# Chargement des données
+
 print("Chargement des données...")
 df_all = load_data()
 
-# Nettoyage des données
 df_all['date_dachat'] = pd.to_datetime(df_all['date_dachat'], errors='coerce')
 df_all['prix_total'] = pd.to_numeric(df_all['prix_total'], errors='coerce')
 
 print(f"Données chargées: {len(df_all)} lignes")
 
-# Initialisation du modèle
+
 sales_predictor = SalesPredictorV2(model_path="models/sales_model_v2.pkl")
 
 print("Tentative de chargement du modèle de ventes...")

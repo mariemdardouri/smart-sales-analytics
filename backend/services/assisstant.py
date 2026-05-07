@@ -1,4 +1,3 @@
-# services/assistant.py
 
 from utils.preprocessing import load_data
 

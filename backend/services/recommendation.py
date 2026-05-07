@@ -8,7 +8,7 @@ def recommend_stock():
 
     recommendations = []
 
-    for product in products[:20]:  # limiter pour performance
+    for product in products[:20]: 
         try:
             forecast = forecast_by_product(product)
             predicted = forecast[-1]["yhat"]
