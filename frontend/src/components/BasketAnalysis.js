@@ -7,9 +7,7 @@ function BasketAnalysis() {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedDelegation, setSelectedDelegation] = useState("");
   const [topProducts, setTopProducts] = useState([]);
-  const [product1Input, setProduct1Input] = useState("");
-  const [product2Input, setProduct2Input] = useState("");
-  const [analysisResult, setAnalysisResult] = useState(null);
+  const [placementSuggestions, setPlacementSuggestions] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("top");
   const [topN, setTopN] = useState(5);
@@ -48,39 +46,29 @@ function BasketAnalysis() {
       });
   };
 
-const handleAnalyzePair = () => {
-    if (!product1Input.trim() || !product2Input.trim()) {
-        alert("Veuillez saisir les deux produits à analyser");
-        return;
+  const handleGetPlacementSuggestions = () => {
+    setLoading(true);
+    let url = `http://127.0.0.1:8000/placement/recommendations?top_n=15`;
+    if (selectedCategory) {
+      url += `&categorie=${encodeURIComponent(selectedCategory)}`;
+    }
+    if (selectedDelegation) {
+      url += `&delegation=${encodeURIComponent(selectedDelegation)}`;
     }
     
-    setLoading(true);
-    let url = `http://127.0.0.1:8000/analyze-pair`;
-    let body = { 
-        produits: [product1Input.trim(), product2Input.trim()],
-        categorie: selectedCategory || null,
-        delegation: selectedDelegation || null
-    };
-    
-    fetch(url, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body)
-    })
-        .then(res => res.json())
-        .then(data => {
-            setAnalysisResult(data);
-            setLoading(false);
-            setActiveTab("analyze");
-        })
-        .catch(err => {
-            console.error("Error analyzing pair:", err);
-            alert("Erreur lors de l'analyse");
-            setLoading(false);
-        });
-};
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        setPlacementSuggestions(data);
+        setLoading(false);
+        setActiveTab("suggestions");
+      })
+      .catch(err => {
+        console.error("Error fetching placement suggestions:", err);
+        alert("Erreur lors de la génération des suggestions");
+        setLoading(false);
+      });
+  };
 
   return (
     <div className="basket-analysis">
@@ -92,10 +80,10 @@ const handleAnalyzePair = () => {
           Top produits ensemble
         </button>
         <button 
-          className={`tab-button ${activeTab === "analyze" ? "active" : ""}`}
-          onClick={() => setActiveTab("analyze")}
+          className={`tab-button ${activeTab === "suggestions" ? "active" : ""}`}
+          onClick={() => setActiveTab("suggestions")}
         >
-          Analyser une paire
+          Suggestions placement
         </button>
       </div>
 
@@ -186,65 +174,153 @@ const handleAnalyzePair = () => {
         </div>
       )}
 
-      {/* Onglet Analyser une paire */}
-      {activeTab === "analyze" && (
+      {/* Onglet Suggestions placement */}
+      {activeTab === "suggestions" && (
         <div className="analysis-card">
-          <div className="analyze-group">
-            <label className="filter-label">
-              Analyser deux produits
-            </label>
-            <div className="pair-input-group">
-              <input
-                type="text"
-                className="text-input"
-                placeholder="Premier produit (ex: Fromage)"
-                value={product1Input}
-                onChange={e => setProduct1Input(e.target.value)}
-              />
-              <span className="pair-separator">+</span>
-              <input
-                type="text"
-                className="text-input"
-                placeholder="Deuxième produit (ex: Shampoing)"
-                value={product2Input}
-                onChange={e => setProduct2Input(e.target.value)}
-              />
-              <button className="primary-button" onClick={handleAnalyzePair}>
-                Analyser
-              </button>
-            </div>
+          <div className="suggestions-header">
+            <h3>🏪 Suggestions de placement en magasin</h3>
+            <p className="suggestions-subtitle">
+              Basé sur l'analyse des paniers d'achat : produits souvent achetés ensemble 
+              (à rapprocher) ou rarement ensemble (à éloigner)
+            </p>
           </div>
 
-          {loading && <div className="loading-spinner">Analyse en cours...</div>}
+          <div className="filters-group">
+            <div className="filter-item">
+              <label className="filter-label">
+                Catégorie
+              </label>
+              <select
+                className="filter-select"
+                value={selectedCategory}
+                onChange={e => setSelectedCategory(e.target.value)}
+              >
+                <option value="">Toutes les catégories</option>
+                {categories.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
 
-          {analysisResult && !loading && (
-            <div className="analysis-result">
-              <div className={`result-header ${analysisResult.sont_souvent_ensemble ? 'warning' : 'success'}`}>
-                <h3>Résultat de l'analyse</h3>
-              </div>
-              
-              <div className="result-content">
-                <div className="product-pair-result">
-                  <span className="product-highlight">{analysisResult.produit1}</span>
-                  <span className="vs">vs</span>
-                  <span className="product-highlight">{analysisResult.produit2}</span>
+            <div className="filter-item">
+              <label className="filter-label">
+                Délégation
+              </label>
+              <select
+                className="filter-select"
+                value={selectedDelegation}
+                onChange={e => setSelectedDelegation(e.target.value)}
+              >
+                <option value="">Toutes les délégations</option>
+                {delegations.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+
+            <button className="primary-button" onClick={handleGetPlacementSuggestions}>
+              Générer les suggestions
+            </button>
+          </div>
+
+          {loading && <div className="loading-spinner">Génération des suggestions...</div>}
+
+          {placementSuggestions && !loading && (
+            <div className="placement-results">
+              {/* Conseils généraux */}
+              {placementSuggestions.conseils_generaux && placementSuggestions.conseils_generaux.length > 0 && (
+                <div className="advice-section">
+                  <h4 className="advice-section-title">💡 Conseils prioritaires</h4>
+                  {placementSuggestions.conseils_generaux.map((conseil, idx) => (
+                    <div key={idx} className={`advice-card ${conseil.type}`}>
+                      <div className="advice-message">{conseil.message}</div>
+                      <div className="advice-detail">{conseil.detail}</div>
+                    </div>
+                  ))}
                 </div>
-                
-         
-                
-                <div className="recommendation-box">
-                  <p className="recommendation-text">{analysisResult.recommandation}</p>
-                </div>
-                
-                {analysisResult.details && analysisResult.details.conseil && (
-                  <div className="advice-box">
-                    <strong>💡 Conseil de placement:</strong>
-                    <p>{analysisResult.details.conseil}</p>
+              )}
+
+              {/* Produits à rapprocher */}
+              {placementSuggestions.a_rapprocher && placementSuggestions.a_rapprocher.length > 0 && (
+                <div className="recommendation-section">
+                  <h4 className="section-title rapprocher-title">
+                    🔥 Produits à RAPPROCHER (souvent achetés ensemble)
+                  </h4>
+                  <div className="product-grid">
+                    {placementSuggestions.a_rapprocher.map((item, idx) => (
+                      <div key={idx} className="product-card rapprocher-card">
+                        <div className="product-rank">{idx + 1}</div>
+                        <div className="product-pair">
+                          <span className="product-name">{item.produit1}</span>
+                          <span className="product-plus">+</span>
+                          <span className="product-name">{item.produit2}</span>
+                        </div>
+                        <div className="placement-stats">
+                          <span className="stat-badge">Lift: {item.lift}</span>
+                          <span className="stat-badge">Confiance: {item.confiance}%</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
-                
-               
-              </div>
+                </div>
+              )}
+
+            {/* Produits à ÉLOIGNER (souvent achetés ensemble) */}
+{placementSuggestions.a_eloigner && placementSuggestions.a_eloigner.length > 0 && (
+  <div className="recommendation-section">
+    <h4 className="section-title eloigner-title">
+      ⚠️ Produits à ÉLOIGNER (souvent achetés ensemble)
+    </h4>
+    <div className="product-grid">
+      {placementSuggestions.a_eloigner.map((item, idx) => (
+        <div key={idx} className="product-card eloigner-card">
+          <div className="product-rank">{idx + 1}</div>
+          <div className="product-pair">
+            <span className="product-name">{item.produit1}</span>
+            <span className="product-plus">+</span>
+            <span className="product-name">{item.produit2}</span>
+          </div>
+          <div className="placement-stats">
+            <span className="stat-badge">Lift: {item.lift}</span>
+            <span className="stat-badge">Confiance: {item.confiance}%</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+{/* Produits à RAPPROCHER (rarement achetés ensemble) */}
+{placementSuggestions.a_rapprocher && placementSuggestions.a_rapprocher.length > 0 && (
+  <div className="recommendation-section">
+    <h4 className="section-title rapprocher-title">
+      ✅ Produits à RAPPROCHER (rarement achetés ensemble)
+    </h4>
+    <div className="product-grid">
+      {placementSuggestions.a_rapprocher.map((item, idx) => (
+        <div key={idx} className="product-card rapprocher-card">
+          <div className="product-rank">{idx + 1}</div>
+          <div className="product-pair">
+            <span className="product-name">{item.produit1}</span>
+            <span className="product-plus">+</span>
+            <span className="product-name">{item.produit2}</span>
+          </div>
+          <div className="placement-stats">
+            <span className="stat-badge">Lift: {item.lift}</span>
+            <span className="stat-badge">Confiance: {item.confiance}%</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+              {(!placementSuggestions.a_rapprocher || placementSuggestions.a_rapprocher.length === 0) && 
+               (!placementSuggestions.a_eloigner || placementSuggestions.a_eloigner.length === 0) && (
+                <div className="empty-state">
+                  Aucune suggestion de placement pour les filtres sélectionnés
+                </div>
+              )}
             </div>
           )}
         </div>

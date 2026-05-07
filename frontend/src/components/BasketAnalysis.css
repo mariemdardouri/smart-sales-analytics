@@ -492,3 +492,114 @@
   color: #334155;
   margin-bottom: 0.25rem;
 }
+
+
+/* Suggestions placement - Ajouter à la fin du fichier CSS existant */
+
+.suggestions-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.suggestions-header h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  color: #1e293b;
+}
+
+.suggestions-subtitle {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.placement-results {
+  margin-top: 2rem;
+}
+
+.advice-section {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 1rem;
+}
+
+.advice-section-title {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #1e293b;
+}
+
+.advice-card {
+  padding: 1rem;
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.advice-card.rapprochement {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+}
+
+.advice-card.eloignement {
+  background: #fee2e2;
+  border-left: 4px solid #ef4444;
+}
+
+.advice-message {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.advice-detail {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.recommendation-section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  padding-left: 1rem;
+}
+
+.rapprocher-title {
+  color: #f59e0b;
+  border-left: 4px solid #f59e0b;
+}
+
+.eloigner-title {
+  color: #ef4444;
+  border-left: 4px solid #ef4444;
+}
+
+.rapprocher-card {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.eloigner-card {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.placement-stats {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
+
+.stat-badge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  background: white;
+  border-radius: 1rem;
+  color: #475569;
+  font-weight: 500;
+}
+
