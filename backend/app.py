@@ -25,7 +25,8 @@ from services.basket_service import (
     get_categories,
     get_delegations,
     get_basket_analysis,
-    get_cooccurrence_analysis
+    get_cooccurrence_analysis,
+    get_placement_recommendations
 )
 
 
@@ -389,3 +390,14 @@ def location_predict(request: LocationRequest):
 @app.get("/location/metrics")
 def location_metrics():
     return loc_get_model_metrics()
+
+@app.get("/placement/recommendations")
+def placement_recommendations(categorie: str = None, delegation: str = None, top_n: int = 10):
+    """Suggère automatiquement les placements de produits"""
+    from services.basket_service import get_placement_recommendations
+    return get_placement_recommendations(df(), categorie, delegation, top_n)
+@app.get("/placement/recommendations")
+def placement_recommendations(categorie: str = None, delegation: str = None, top_n: int = 10):
+    """Suggère automatiquement les placements de produits"""
+    from services.basket_service import get_placement_recommendations
+    return get_placement_recommendations(df(), categorie, delegation, top_n)
