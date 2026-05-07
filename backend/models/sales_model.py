@@ -28,25 +28,21 @@ class SalesPredictor:
         """
         Prépare les features pour l'entraînement
         """
-        # Créer une copie
+
         data = df.copy()
         
-        # Features temporelles
         data['date_dachat'] = pd.to_datetime(data['date_dachat'])
         data['month'] = data['date_dachat'].dt.month
         data['day_of_week'] = data['date_dachat'].dt.dayofweek
         data['day_of_month'] = data['date_dachat'].dt.day
         data['week_of_year'] = data['date_dachat'].dt.isocalendar().week
         
-        # Features produit
         data['prix_unitaire'] = pd.to_numeric(data['prix_unitaire'], errors='coerce')
         data['quantité_achetée'] = pd.to_numeric(data['quantité_achetée'], errors='coerce')
         
-        # Calculer le chiffre d'affaires si non présent
         if 'prix_total' not in data.columns:
             data['prix_total'] = data['prix_unitaire'] * data['quantité_achetée']
         
-        # Aggréger par catégorie, délégation, mois
         features = data.groupby(['categorie', 'délégation', 'localité', 'month', 'day_of_week']).agg({
             'prix_total': 'sum',
             'quantité_achetée': 'sum',
@@ -66,11 +62,9 @@ class SalesPredictor:
         print("ENTRAÎNEMENT DU MODÈLE DE PRÉDICTION DES VENTES")
         print("="*60)
         
-        # Préparer les features
         print("\n📊 Préparation des données...")
         features_df = self.prepare_features(df)
         
-        # Définir les features et la target
         feature_cols = ['categorie', 'delegation', 'localite', 'month', 'day_of_week']
         X = features_df[feature_cols]
         y = features_df['chiffre_affaires']
@@ -78,7 +72,6 @@ class SalesPredictor:
         print(f"  Dataset size: {len(X)} échantillons")
         print(f"  Features: {feature_cols}")
         
-        # Split train/test
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=test_size, random_state=42
         )
@@ -86,7 +79,6 @@ class SalesPredictor:
         print(f"\n  Train size: {len(X_train)}")
         print(f"  Test size: {len(X_test)}")
         
-        # Créer le préprocesseur
         categorical_features = ['categorie', 'delegation', 'localite']
         numerical_features = ['month', 'day_of_week']
         
@@ -96,7 +88,7 @@ class SalesPredictor:
                 ('cat', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical_features)
             ])
         
-        # Choisir le modèle
+
         if model_type == "RandomForest":
             self.model = RandomForestRegressor(
                 n_estimators=100,
@@ -118,7 +110,7 @@ class SalesPredictor:
         else:
             self.model = RandomForestRegressor(random_state=42)
         
-        # Créer le pipeline
+
         pipeline = Pipeline([
             ('preprocessor', self.preprocessor),
             ('regressor', self.model)
@@ -127,11 +119,11 @@ class SalesPredictor:
         print(f"\n🔄 Entraînement du modèle {model_type}...")
         pipeline.fit(X_train, y_train)
         
-        # Prédictions
+
         y_pred_train = pipeline.predict(X_train)
         y_pred_test = pipeline.predict(X_test)
         
-        # Calcul des métriques
+
         self.metrics = {
             'train': {
                 'r2': r2_score(y_train, y_pred_train),
@@ -147,15 +139,13 @@ class SalesPredictor:
             }
         }
         
-        # Cross-validation
         print("\n📊 Cross-validation...")
         cv_scores = cross_val_score(pipeline, X, y, cv=5, scoring='r2')
         self.metrics['cv_mean'] = cv_scores.mean()
         self.metrics['cv_std'] = cv_scores.std()
         
-        # Feature importance (pour RandomForest)
+
         if model_type in ["RandomForest", "GradientBoosting"]:
-            # Récupérer les feature names après one-hot encoding
             cat_features = pipeline.named_steps['preprocessor'].named_transformers_['cat'].get_feature_names_out(categorical_features)
             all_features = numerical_features + list(cat_features)
             
@@ -166,10 +156,8 @@ class SalesPredictor:
         self.model_type = model_type
         self.is_trained = True
         
-        # Afficher les résultats
         self.print_metrics()
         
-        # Sauvegarder le modèle
         self.save_model()
         
         print("\n✅ Modèle entraîné avec succès!")
@@ -211,15 +199,14 @@ class SalesPredictor:
         if not self.is_trained:
             return {"error": "Modèle non entraîné"}
         
-        # Créer le dataframe de prédiction
+
         predictions = []
-        
-        # Si month n'est pas spécifié, utiliser tous les mois
+
         months = [month] if month else list(range(1, 13))
         
         for categorie in categories:
             for month_val in months:
-                for day in [1, 8, 15, 22]:  # Échantillon de jours
+                for day in [1, 8, 15, 22]:  
                     pred_data = pd.DataFrame({
                         'categorie': [categorie],
                         'delegation': [delegation if delegation else 'Toutes'],
@@ -228,9 +215,7 @@ class SalesPredictor:
                         'day_of_week': [day % 7]
                     })
                     
-                    # Prédire
                     try:
-                        # Recharger le pipeline
                         with open(self.model_path, 'rb') as f:
                             pipeline = pickle.load(f)
                         
@@ -253,7 +238,6 @@ class SalesPredictor:
                             'error': "Erreur de prédiction"
                         })
         
-        # Aggréger par catégorie
         result = {}
         for pred in predictions:
             cat = pred['categorie']
@@ -266,7 +250,6 @@ class SalesPredictor:
             result[cat]['chiffre_affaires_total'] += pred['chiffre_affaires_predit']
             result[cat]['details'].append(pred)
         
-        # Calculer le total général
         total_ca = sum([r['chiffre_affaires_total'] for r in result.values()])
         
         return {
@@ -305,7 +288,6 @@ class SalesPredictor:
         Sauvegarde le modèle et le préprocesseur
         """
         try:
-            # Créer le pipeline complet
             pipeline = Pipeline([
                 ('preprocessor', self.preprocessor),
                 ('regressor', self.model)

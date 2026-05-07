@@ -1,4 +1,4 @@
-# services/product_score.py
+
 
 from utils.preprocessing import load_data
 
@@ -13,7 +13,7 @@ def product_score():
 
     grouped.columns = ["produit", "volume", "revenue", "frequency"]
 
-    # Score simple
+
     grouped["score"] = (
         grouped["volume"] * 0.5 +
         grouped["revenue"] * 0.3 +

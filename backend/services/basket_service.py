@@ -4,30 +4,17 @@ from collections import Counter
 import pandas as pd
 from models import BasketRecommender
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Chargement des données
-# ──────────────────────────────────────────────────────────────────────────────
 df_all = load_data()
 
-# Colonnes EXACTES confirmées par les logs :
-#   client_id | délégation | localité | code_postal | date_dachat |
-#   produit_acheté | quantité_achetée | prix_unitaire | prix_total |
-#   année | mois | jour | produit_clean | nom_produit | marque |
-#   taille_reference | categorie
 
 df_all["date_dachat"] = pd.to_datetime(df_all["date_dachat"], errors="coerce")
 
-# ── Clé de transaction ────────────────────────────────────────────────────────
-# Tous les produits achetés par un même client le même jour = un panier
 df_all["transaction"] = (
     df_all["client_id"].astype(str)
     + "_"
     + df_all["date_dachat"].dt.strftime("%Y-%m-%d")
 )
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Modèle de recommandation
-# ──────────────────────────────────────────────────────────────────────────────
 recommender = BasketRecommender(model_path="models/basket_model.pkl")
 
 print("Tentative de chargement du modèle existant...")
@@ -37,11 +24,6 @@ if not recommender.load_model():
     print("Modèle entraîné et sauvegardé !")
 else:
     print("Modèle chargé — prêt à l'emploi !")
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Helpers exposés aux endpoints FastAPI
-# ──────────────────────────────────────────────────────────────────────────────
 
 def get_categories(df: pd.DataFrame) -> list:
     col = "categorie" if "categorie" in df.columns else "produit_acheté"
@@ -75,7 +57,7 @@ def get_basket_analysis(
     if df_f.empty:
         return []
 
-    # Recalculer la clé de transaction sur le sous-ensemble filtré
+
     df_f["transaction"] = (
         df_f["client_id"].astype(str)
         + "_"

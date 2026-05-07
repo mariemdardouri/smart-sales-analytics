@@ -1,5 +1,3 @@
-# services/geo_analysis.py
-
 from utils.preprocessing import load_data
 
 def geo_analysis():

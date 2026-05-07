@@ -33,9 +33,6 @@ class LocationModel:
        
         self._df_raw = None
 
-    # ──────────────────────────────────────────────────────────────────
-    # ENTRAÎNEMENT
-    # ──────────────────────────────────────────────────────────────────
     def train(self, df: pd.DataFrame):
         print("\n" + "=" * 60)
         print("  ENTRAÎNEMENT — LOCATION MODEL (Random Forest)")

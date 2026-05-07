@@ -3,7 +3,6 @@ import pandas as pd
 from mlxtend.frequent_patterns import apriori, association_rules
 from prophet import Prophet
 
-# 🔹 2.1 TOP PRODUITS
 def get_top_products(n=10):
     df = load_data()
 
@@ -15,7 +14,6 @@ def get_top_products(n=10):
     return top.reset_index().to_dict(orient="records")
 
 
-# 🔹 2.2 PRODUITS PAR CLIENT
 def get_customer_products(client_id):
     df = load_data()
 
@@ -27,8 +25,6 @@ def get_customer_products(client_id):
 
     return products.reset_index().to_dict(orient="records")
 
-
-# 🔹 2.3 MARKET BASKET ANALYSIS
 def get_association_rules():
     df = load_data()
 
@@ -48,7 +44,6 @@ def get_association_rules():
         .head(10).to_dict(orient="records")
 
 
-# 🔹 2.4 FORECAST PAR PRODUIT
 def forecast_by_product(name):
     df = load_data()
 
@@ -57,7 +52,6 @@ def forecast_by_product(name):
     df = df.groupby("date_dachat")["quantité_achetée"].sum().reset_index()
     df.columns = ["ds", "y"]
 
-    # ✅ FIX IMPORTANT
     if len(df) < 2:
         return {"error": "Pas assez de données pour ce produit"}
 
@@ -87,13 +81,10 @@ def get_association_rules():
 import pandas as pd
 
 def get_products_by_client(client_id):
-    # Read CSV, skip bad lines
     df = load_data()
 
-    # Filter for the client
     client_data = df[df['client_id'] == client_id]
 
-    # Convert NaN to None for JSON
     data = client_data.to_dict(orient='records')
     for row in data:
         for k, v in row.items():

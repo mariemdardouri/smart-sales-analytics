@@ -1,4 +1,3 @@
-# chat_service.py
 import os
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -15,11 +14,10 @@ import time
 from typing import Dict, List, Optional
 
 load_dotenv()
-# Initialize the model
 llm = ChatGoogleGenerativeAI(
     model="gemini-2.0-flash", 
     api_key=os.getenv("GEMINI_API_KEY"),
-    temperature=0.3,  # Réduire la température pour des réponses plus précises
+    temperature=0.3, 
     request_timeout=30,
     max_retries=2
 )
@@ -27,7 +25,7 @@ llm = ChatGoogleGenerativeAI(
 
 print("✅ Modèle Gemini initialisé.")
 
-# Variable pour stocker le contexte de la dernière conversation
+
 last_context = {
     "region": None,
     "categorie": None,
@@ -54,14 +52,12 @@ def extract_filters(question: str) -> dict:
     
     question_lower = question.lower()
     
-    # Détecter si c'est une question de comparaison
     if any(keyword in question_lower for keyword in [
         "compar", "différence", "et a", "c est les memes", "même chose",
         "entre", "vs", "versus"
     ]):
         filters["is_comparison"] = True
     
-    # Détecter si on veut un seul produit
     if any(keyword in question_lower for keyword in [
         "le produit le plus acheté", "le plus vendu", "le meilleur produit",
         "quel est le produit", "quel produit", "top 1", "un seul"
@@ -69,21 +65,18 @@ def extract_filters(question: str) -> dict:
         filters["single_product"] = True
         filters["top_n"] = 1
     
-    # Extraire le nombre de résultats
     top_match = re.search(r'top (\d+)', question_lower)
     if top_match:
         filters["top_n"] = int(top_match.group(1))
         if filters["top_n"] == 1:
             filters["single_product"] = True
     
-    # Extraire la catégorie - Passer df_all en argument
     categories = get_categories(df_all)
     for cat in categories:
         if cat.lower() in question_lower:
             filters["categorie"] = cat
             break
     
-    # Extraire la délégation/ville - Passer df_all en argument
     delegations = get_delegations(df_all)
     mentioned_delegations = []
     for delg in delegations:
@@ -91,11 +84,11 @@ def extract_filters(question: str) -> dict:
             mentioned_delegations.append(delg)
             filters["delegation"] = delg
     
-    # Pour les comparaisons, stocker toutes les régions mentionnées
+
     if len(mentioned_delegations) > 0:
         filters["comparison_regions"] = mentioned_delegations
     
-    # Extraire les produits mentionnés
+
     product_pattern = r'"([^"]+)"|' + r"'([^']+)'"
     products = re.findall(product_pattern, question)
     if products:
@@ -110,7 +103,6 @@ def answer_top_products(question: str, filters: dict) -> str:
     try:
         df_filtered = df_all
         
-        # Appliquer les filtres
         if filters["categorie"]:
             df_filtered = df_filtered[df_filtered["categorie"] == filters["categorie"]]
         
@@ -122,7 +114,6 @@ def answer_top_products(question: str, filters: dict) -> str:
             category = filters["categorie"] or "toutes catégories"
             return f"Aucun produit trouvé pour {category} à {location}."
         
-        # Top produits par fréquence d'achat
         top_products = (
             df_filtered["nom_produit"]
             .value_counts()
@@ -132,14 +123,13 @@ def answer_top_products(question: str, filters: dict) -> str:
         if top_products.empty:
             return "Aucun produit trouvé."
         
-        # Sauvegarder le contexte pour les questions suivantes
         if filters["delegation"]:
             last_context["region"] = filters["delegation"]
         if filters["categorie"]:
             last_context["categorie"] = filters["categorie"]
         last_context["top_n"] = filters["top_n"]
         
-        # Formater la réponse selon si on veut un seul produit ou plusieurs
+
         if filters["single_product"]:
             product_name = top_products.index[0]
             count = top_products.values[0]
@@ -174,7 +164,6 @@ def answer_top_products(question: str, filters: dict) -> str:
 def answer_basket_analysis(question: str, filters: dict) -> str:
     """Répond aux questions sur les produits achetés ensemble"""
     try:
-        # Si la question mentionne deux produits spécifiques
         if filters["produits"] and len(filters["produits"]) >= 2:
             result = get_cooccurrence_analysis(df_all, produits=filters["produits"][:2])
             if "error" not in result:
@@ -195,8 +184,7 @@ def answer_basket_analysis(question: str, filters: dict) -> str:
                 return response
             else:
                 return f"Erreur: {result.get('error', 'Produits non trouvés')}"
-        
-        # Sinon, chercher les meilleures paires avec filtres
+
         else:
             pairs = get_basket_analysis(
                 df_all,
@@ -233,7 +221,7 @@ def answer_comparison_question(question: str, filters: dict) -> Optional[str]:
     
     question_lower = question.lower()
     
-    # Récupérer les régions mentionnées - Passer df_all en argument
+
     delegations = get_delegations(df_all)
     mentioned_regions = []
     
@@ -241,17 +229,17 @@ def answer_comparison_question(question: str, filters: dict) -> Optional[str]:
         if delg.lower() in question_lower:
             mentioned_regions.append(delg)
     
-    # Si c'est une question "et a ariana c'est les memes ?"
+
     if "c est les memes" in question_lower or "même chose" in question_lower or "et a" in question_lower:
         if len(mentioned_regions) == 1 and last_context["region"]:
-            # Comparer avec la région précédente
+
             region1 = last_context["region"]
             region2 = mentioned_regions[0]
             
             df_region1 = df_all[df_all["délégation"] == region1]
             df_region2 = df_all[df_all["délégation"] == region2]
             
-            # Récupérer le top 3 produits pour chaque région
+
             top_region1 = df_region1["nom_produit"].value_counts().head(3)
             top_region2 = df_region2["nom_produit"].value_counts().head(3)
             
@@ -264,7 +252,7 @@ def answer_comparison_question(question: str, filters: dict) -> Optional[str]:
             for i, (product, count) in enumerate(top_region2.items(), 1):
                 response += f"  {i}. {product} - {count} achats\n"
             
-            # Analyser si les produits sont similaires
+
             common_products = set(top_region1.index) & set(top_region2.index)
             if common_products:
                 response += f"\n✨ **Produits communs**: {', '.join(common_products)}\n"
@@ -273,14 +261,14 @@ def answer_comparison_question(question: str, filters: dict) -> Optional[str]:
             
             return response
     
-    # Si la question mentionne explicitement deux régions
+
     elif len(mentioned_regions) >= 2:
         region1, region2 = mentioned_regions[0], mentioned_regions[1]
         
         df_region1 = df_all[df_all["délégation"] == region1]
         df_region2 = df_all[df_all["délégation"] == region2]
         
-        # Récupérer le top 5 produits pour chaque région
+
         top_region1 = df_region1["nom_produit"].value_counts().head(5)
         top_region2 = df_region2["nom_produit"].value_counts().head(5)
         
@@ -312,7 +300,7 @@ def answer_general_question(question: str) -> str:
     )
     
     try:
-        # Ajouter un petit délai pour éviter les rate limits
+
         time.sleep(0.5)
         
         response = llm.invoke([
@@ -322,7 +310,7 @@ def answer_general_question(question: str) -> str:
         return response.content
     except Exception as e:
         error_msg = str(e)
-        # Fallback quand l'API est limitée
+
         if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
             return "⚠️ **Limite d'utilisation atteinte**\n\n" \
                    "Je suis actuellement très sollicité(e). Voici ce que je peux faire sans utiliser l'IA:\n" \
@@ -341,17 +329,16 @@ def ask_chatbot(question: str) -> str:
     Analyse intelligemment la question et utilise les fonctions appropriées.
     """
     question_lower = question.lower()
-    
-    # Extraire les filtres de la question
+
     filters = extract_filters(question)
     
-    # Vérifier si c'est une question de comparaison
+
     if filters["is_comparison"] or "et a" in question_lower:
         comparison_result = answer_comparison_question(question, filters)
         if comparison_result:
             return comparison_result
     
-    # Déterminer le type de question
+
     is_top_products = any(keyword in question_lower for keyword in [
         "top", "produit", "produits", "plus acheté",
         "meilleur", "best", "vendu"
@@ -374,7 +361,7 @@ def ask_chatbot(question: str) -> str:
         "catégorie", "type de produit", "famille", "categories"
     ])
     
-    # Répondre selon le type de question
+
     if is_basket_analysis:
         return answer_basket_analysis(question, filters)
 
@@ -389,12 +376,12 @@ def ask_chatbot(question: str) -> str:
         return response
     
     else:
-        # Pour les questions générales, vérifier d'abord les comparaisons
+
         comparison_result = answer_comparison_question(question, filters)
         if comparison_result:
             return comparison_result
         
-        # Si c'est une question sur les régions ou catégories mais pas explicite
+
         categories = get_categories(df_all)
         if any(cat.lower() in question_lower for cat in categories):
             return answer_top_products(question, filters)
@@ -402,11 +389,10 @@ def ask_chatbot(question: str) -> str:
         delegations = get_delegations(df_all)
         if any(delg.lower() in question_lower for delg in delegations):
             return answer_top_products(question, filters)
-        # 🔥 AUTO INSIGHTS TRIGGER
         if any(word in question_lower for word in ["insight", "analyse globale", "résumé", "dashboard"]):
             return generate_auto_insights()
         
-        # Utiliser l'API Gemini pour les questions générales
+
         try:
             return answer_general_question(question)
         except:

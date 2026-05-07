@@ -152,7 +152,6 @@ class SalesPredictorV2:
             localite_val = localite if localite else 'Tunis'
             
             if month is not None:
-                # Cas 1: Un mois spécifique - retourner la valeur de CE mois
                 pred_data = pd.DataFrame({
                     'categorie': [categorie],
                     'delegation': [delegation_val],
@@ -183,7 +182,6 @@ class SalesPredictorV2:
                         'period_type': 'month'
                     })
             else:
-                # Cas 2: Tous les mois - SOMMER les 12 mois pour obtenir l'annuel
                 total_annuel = 0
                 details_mois = []
                 
@@ -221,7 +219,6 @@ class SalesPredictorV2:
         
         total_ca = sum([r['chiffre_affaires_predit'] for r in results])
         
-        # Construction de la note
         if month is not None:
             note = f"Prédiction mensuelle pour {localite_val} - Mois {month}"
         else:
