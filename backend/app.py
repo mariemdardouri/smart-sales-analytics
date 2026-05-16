@@ -41,6 +41,8 @@ from services.location_service import (
     get_best_region,
     get_model_metrics as loc_get_model_metrics
 )
+from auth_routes import router as auth_router
+
 
 
 app = FastAPI(title="Smart Sales Analytics API")
@@ -52,6 +54,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(auth_router)
 
 def df():
     return get_clean_df()
@@ -374,8 +377,52 @@ def placement_recommendations(categorie: str = None, delegation: str = None, top
     """Suggère automatiquement les placements de produits"""
     from services.basket_service import get_placement_recommendations
     return get_placement_recommendations(df(), categorie, delegation, top_n)
+
+@app.get("/layout/recommendations")
+async def layout_recommendations(delegation: str = None):
+    """
+    Retourne les recommandations de layout de magasin
+    (quelles catégories rapprocher ou éloigner)
+    """
+    from services.basket_service import get_layout_by_delegation
+    return get_layout_by_delegation(df(), delegation)
+# ─────────────────────────────────────────────────────────────
+# BASKET ANALYSIS ROUTES
+# ─────────────────────────────────────────────────────────────
+
 @app.get("/placement/recommendations")
-def placement_recommendations(categorie: str = None, delegation: str = None, top_n: int = 10):
-    """Suggère automatiquement les placements de produits"""
-    from services.basket_service import get_placement_recommendations
-    return get_placement_recommendations(df(), categorie, delegation, top_n)
+def placement_recommendations(
+    categorie: str = None,
+    delegation: str = None,
+    top_n: int = 10
+):
+    """
+    Analyse des produits :
+    - Produits à rapprocher
+    - Produits à éloigner
+    """
+
+    return get_placement_recommendations(
+        df(),
+        categorie,
+        delegation,
+        top_n
+    )
+
+
+@app.get("/layout/recommendations")
+def layout_recommendations(
+    delegation: str = None
+):
+    """
+    Analyse catégories :
+    - catégories à rapprocher
+    - catégories à éloigner
+    """
+
+    from services.basket_service import get_layout_by_delegation
+
+    return get_layout_by_delegation(
+        df(),
+        delegation
+    )
