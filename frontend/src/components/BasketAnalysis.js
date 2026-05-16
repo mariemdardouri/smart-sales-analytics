@@ -1,330 +1,301 @@
 import React, { useState, useEffect } from "react";
 import "./BasketAnalysis.css";
 
+// Icônes SVG
+const ProductsIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <rect x="9" y="2" width="6" height="6" rx="1"/>
+    <rect x="4" y="10" width="16" height="12" rx="2"/>
+    <line x1="9" y1="16" x2="15" y2="16"/>
+  </svg>
+);
+
+const CategoriesIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <path d="M4 4h16v16H4z"/>
+    <path d="M9 8h6"/>
+    <path d="M9 12h6"/>
+  </svg>
+);
+
+const InfoIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="12" x2="12" y2="16"/>
+    <line x1="12" y1="8" x2="12.01" y2="8"/>
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+);
+
+const AlertIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="8" x2="12" y2="12"/>
+    <circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"/>
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <line x1="18" y1="6" x2="6" y2="18"/>
+    <line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
+
 function BasketAnalysis() {
+
   const [categories, setCategories] = useState([]);
   const [delegations, setDelegations] = useState([]);
+
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedDelegation, setSelectedDelegation] = useState("");
-  const [topProducts, setTopProducts] = useState([]);
+
   const [placementSuggestions, setPlacementSuggestions] = useState(null);
+  const [layoutSuggestions, setLayoutSuggestions] = useState(null);
+
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("top");
-  const [topN, setTopN] = useState(5);
+  const [analysisMode, setAnalysisMode] = useState("products");
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/categories")
       .then(res => res.json())
-      .then(data => setCategories(data))
-      .catch(err => console.error("Error loading categories:", err));
+      .then(data => setCategories(data));
 
     fetch("http://127.0.0.1:8000/delegations")
       .then(res => res.json())
-      .then(data => setDelegations(data))
-      .catch(err => console.error("Error loading delegations:", err));
+      .then(data => setDelegations(data));
   }, []);
 
-  const handleFetchBasket = () => {
+  const handleProductAnalysis = async () => {
     setLoading(true);
-    let url = `http://127.0.0.1:8000/basket?top_n=${topN}`;
-    if (selectedCategory) {
-      url += `&categorie=${encodeURIComponent(selectedCategory)}`;
+    let url = `http://127.0.0.1:8000/placement/recommendations?top_n=10`;
+
+    if (selectedCategory) url += `&categorie=${encodeURIComponent(selectedCategory)}`;
+    if (selectedDelegation) url += `&delegation=${encodeURIComponent(selectedDelegation)}`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      setPlacementSuggestions(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    if (selectedDelegation) {
-      url += `&delegation=${encodeURIComponent(selectedDelegation)}`;
-    }
-    
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        setTopProducts(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Error fetching top products:", err);
-        setLoading(false);
-      });
   };
 
-  const handleGetPlacementSuggestions = () => {
+  const handleLayoutAnalysis = async () => {
     setLoading(true);
-    let url = `http://127.0.0.1:8000/placement/recommendations?top_n=15`;
-    if (selectedCategory) {
-      url += `&categorie=${encodeURIComponent(selectedCategory)}`;
+    let url = `http://127.0.0.1:8000/layout/recommendations`;
+
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      setLayoutSuggestions(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    if (selectedDelegation) {
-      url += `&delegation=${encodeURIComponent(selectedDelegation)}`;
+  };
+
+  // Déterminer la recommandation en fonction du lift (caché à l'utilisateur)
+  const getRecommendation = (lift) => {
+    if (lift < 0.85) {
+      return {
+        action: "À rapprocher",
+        description: "Ces catégories sont rarement achetées ensemble",
+        placement: "Placez-les côte à côte pour encourager la découverte",
+        icon: <CheckIcon />
+      };
+    } else if (lift < 0.95) {
+      return {
+        action: "Placement libre",
+        description: "Association neutre, pas de contrainte particulière",
+        placement: "Peuvent être placées dans la même zone",
+        icon: <InfoIcon />
+      };
+    } else {
+      return {
+        action: "À éloigner",
+        description: "Ces catégories sont souvent achetées ensemble",
+        placement: "Disposez-les aux extrémités opposées du magasin",
+        icon: <AlertIcon />
+      };
     }
-    
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        setPlacementSuggestions(data);
-        setLoading(false);
-        setActiveTab("suggestions");
-      })
-      .catch(err => {
-        console.error("Error fetching placement suggestions:", err);
-        alert("Erreur lors de la génération des suggestions");
-        setLoading(false);
-      });
   };
 
   return (
     <div className="basket-analysis">
-      <div className="tabs-container">
-        <button 
-          className={`tab-button ${activeTab === "top" ? "active" : ""}`}
-          onClick={() => setActiveTab("top")}
+      <div className="top-header">
+        <div>
+          <h1>Optimisation du placement</h1>
+          <p>Recommandations intelligentes pour organiser votre espace de vente</p>
+        </div>
+      </div>
+
+      <div className="mode-selector">
+        <button
+          className={analysisMode === "products" ? "active-mode" : ""}
+          onClick={() => setAnalysisMode("products")}
         >
-          Top produits ensemble
+          <ProductsIcon />
+          <span>Par produit</span>
         </button>
-        <button 
-          className={`tab-button ${activeTab === "suggestions" ? "active" : ""}`}
-          onClick={() => setActiveTab("suggestions")}
+        <button
+          className={analysisMode === "layout" ? "active-mode" : ""}
+          onClick={() => setAnalysisMode("layout")}
         >
-          Suggestions placement
+          <CategoriesIcon />
+          <span>Par catégorie</span>
         </button>
       </div>
 
-      {/* Onglet Top produits ensemble */}
-      {activeTab === "top" && (
-        <div className="analysis-card">
-          <div className="filters-group">
-            <div className="filter-item">
-              <label htmlFor="category-select" className="filter-label">
-                Catégorie
-              </label>
-              <select
-                id="category-select"
-                className="filter-select"
-                value={selectedCategory}
-                onChange={e => setSelectedCategory(e.target.value)}
-              >
+      <div className="analysis-card">
+        <div className="filters-row">
+          {analysisMode === "products" && (
+            <div className="filter-box">
+              <label>Catégorie</label>
+              <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
                 <option value="">Toutes les catégories</option>
-                {categories.map(c => (
-                  <option key={c} value={c}>{c}</option>
+                {categories.map((cat, i) => (
+                  <option key={i} value={cat}>{cat}</option>
                 ))}
               </select>
             </div>
+          )}
 
-            <div className="filter-item">
-              <label htmlFor="delegation-select" className="filter-label">
-                Délégation
-              </label>
-              <select
-                id="delegation-select"
-                className="filter-select"
-                value={selectedDelegation}
-                onChange={e => setSelectedDelegation(e.target.value)}
-              >
+          {analysisMode === "products" && (
+            <div className="filter-box">
+              <label>Délégation</label>
+              <select value={selectedDelegation} onChange={(e) => setSelectedDelegation(e.target.value)}>
                 <option value="">Toutes les délégations</option>
-                {delegations.map(d => (
-                  <option key={d} value={d}>{d}</option>
+                {delegations.map((d, i) => (
+                  <option key={i} value={d}>{d}</option>
                 ))}
               </select>
             </div>
+          )}
 
-            <div className="filter-item">
-              <label htmlFor="top-n" className="filter-label">
-                Nombre de combinaisons
-              </label>
-              <input
-                id="top-n"
-                type="number"
-                className="number-input"
-                value={topN}
-                onChange={e => setTopN(Math.max(1, parseInt(e.target.value) || 5))}
-                min="1"
-                max="20"
-              />
+          {analysisMode === "layout" && (
+            <div className="info-banner">
+              <InfoIcon />
+              <span>Analyse basée sur l'ensemble des données pour un plan général</span>
             </div>
+          )}
 
-            <button className="primary-button" onClick={handleFetchBasket}>
-              Analyser
-            </button>
-          </div>
+          <button className="analyze-btn" onClick={analysisMode === "products" ? handleProductAnalysis : handleLayoutAnalysis}>
+            {loading ? "Analyse en cours..." : "Lancer l'analyse"}
+          </button>
+        </div>
 
-          {loading && <div className="loading-spinner">Chargement...</div>}
+        {loading && <div className="loading-box">Analyse des données en cours...</div>}
 
-          {topProducts.length > 0 && !loading && (
-            <div className="products-list">
-              <h3 className="list-title">
-                Top {topProducts.length} combinaisons de produits
-              </h3>
-              <div className="product-grid">
-                {topProducts.map((item, i) => (
-                  <div key={i} className="product-card">
-                    <div className="product-rank">{i + 1}</div>
-                    <div className="product-pair">
-                      {item.produits.map((prod, idx) => (
-                        <React.Fragment key={idx}>
-                          <span className="product-name">{prod}</span>
-                          {idx < item.produits.length - 1 && (
-                            <span className="product-plus">+</span>
-                          )}
-                        </React.Fragment>
-                      ))}
-                    </div>
+        {/* Analyse Produits */}
+        {analysisMode === "products" && placementSuggestions && !loading && (
+          <>
+            {placementSuggestions.a_eloigner?.length > 0 && (
+              <ResultSection
+                title="Produits à éloigner"
+                description="Ces produits sont souvent achetés ensemble, séparez-les pour maximiser le panier moyen"
+                items={placementSuggestions.a_eloigner}
+                type="alert"
+                icon={<AlertIcon />}
+              />
+            )}
+            {placementSuggestions.a_rapprocher?.length > 0 && (
+              <ResultSection
+                title="Produits à rapprocher"
+                description="Ces produits sont rarement achetés ensemble, rapprochez-les pour stimuler la découverte"
+                items={placementSuggestions.a_rapprocher}
+                type="success"
+                icon={<CheckIcon />}
+              />
+            )}
+          </>
+        )}
+
+        {/* Analyse Catégories */}
+        {analysisMode === "layout" && layoutSuggestions && !loading && (
+          <div className="layout-recommendations">
+            
+            {/* Plan d'action */}
+            <div className="action-plan">
+              <h3>Plan de disposition recommandé</h3>
+              <div className="plan-steps">
+                {layoutSuggestions.plan_suggestion?.map((step, idx) => (
+                  <div key={idx} className="plan-step">
+                    <span className="step-num">{idx + 1}</span>
+                    <span className="step-text">{step}</span>
                   </div>
                 ))}
               </div>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* Onglet Suggestions placement */}
-      {activeTab === "suggestions" && (
-        <div className="analysis-card">
-          <div className="suggestions-header">
-            <h3>🏪 Suggestions de placement en magasin</h3>
-            <p className="suggestions-subtitle">
-              Basé sur l'analyse des paniers d'achat : produits souvent achetés ensemble 
-              (à rapprocher) ou rarement ensemble (à éloigner)
-            </p>
-          </div>
-
-          <div className="filters-group">
-            <div className="filter-item">
-              <label className="filter-label">
-                Catégorie
-              </label>
-              <select
-                className="filter-select"
-                value={selectedCategory}
-                onChange={e => setSelectedCategory(e.target.value)}
-              >
-                <option value="">Toutes les catégories</option>
-                {categories.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-item">
-              <label className="filter-label">
-                Délégation
-              </label>
-              <select
-                className="filter-select"
-                value={selectedDelegation}
-                onChange={e => setSelectedDelegation(e.target.value)}
-              >
-                <option value="">Toutes les délégations</option>
-                {delegations.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-
-            <button className="primary-button" onClick={handleGetPlacementSuggestions}>
-              Générer les suggestions
-            </button>
-          </div>
-
-          {loading && <div className="loading-spinner">Génération des suggestions...</div>}
-
-          {placementSuggestions && !loading && (
-            <div className="placement-results">
-              {/* Conseils généraux */}
-              {placementSuggestions.conseils_generaux && placementSuggestions.conseils_generaux.length > 0 && (
-                <div className="advice-section">
-                  <h4 className="advice-section-title">💡 Conseils prioritaires</h4>
-                  {placementSuggestions.conseils_generaux.map((conseil, idx) => (
-                    <div key={idx} className={`advice-card ${conseil.type}`}>
-                      <div className="advice-message">{conseil.message}</div>
-                      <div className="advice-detail">{conseil.detail}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Produits à rapprocher */}
-              {placementSuggestions.a_rapprocher && placementSuggestions.a_rapprocher.length > 0 && (
-                <div className="recommendation-section">
-                  <h4 className="section-title rapprocher-title">
-                    🔥 Produits à RAPPROCHER (souvent achetés ensemble)
-                  </h4>
-                  <div className="product-grid">
-                    {placementSuggestions.a_rapprocher.map((item, idx) => (
-                      <div key={idx} className="product-card rapprocher-card">
-                        <div className="product-rank">{idx + 1}</div>
-                        <div className="product-pair">
-                          <span className="product-name">{item.produit1}</span>
-                          <span className="product-plus">+</span>
-                          <span className="product-name">{item.produit2}</span>
-                        </div>
-                        <div className="placement-stats">
-                          <span className="stat-badge">Lift: {item.lift}</span>
-                          <span className="stat-badge">Confiance: {item.confiance}%</span>
+            {/* Toutes les catégories classées par recommandation */}
+            <div className="recommendations-lists">
+              {[...(layoutSuggestions.zones_a_rapprocher || []), ...(layoutSuggestions.zones_a_eloigner || [])]
+                .sort((a, b) => a.lift - b.lift)
+                .map((item, idx) => {
+                  const rec = getRecommendation(item.lift);
+                  const isAlert = rec.action === "À éloigner";
+                  const isSuccess = rec.action === "À rapprocher";
+                  
+                  return (
+                    <div key={idx} className={`recommendation-card ${isAlert ? 'alert' : isSuccess ? 'success' : 'neutral'}`}>
+                      <div className="card-header">
+                        <div className="card-icon">{rec.icon}</div>
+                        <div className="card-action">{rec.action}</div>
+                        <div className="card-pair">
+                          <span className="cat-name">{item.description?.split(" et ")[0]}</span>
+                          <span className="cat-separator">+</span>
+                          <span className="cat-name">{item.description?.split(" et ")[1]}</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            {/* Produits à ÉLOIGNER (souvent achetés ensemble) */}
-{placementSuggestions.a_eloigner && placementSuggestions.a_eloigner.length > 0 && (
-  <div className="recommendation-section">
-    <h4 className="section-title eloigner-title">
-      ⚠️ Produits à ÉLOIGNER (souvent achetés ensemble)
-    </h4>
-    <div className="product-grid">
-      {placementSuggestions.a_eloigner.map((item, idx) => (
-        <div key={idx} className="product-card eloigner-card">
-          <div className="product-rank">{idx + 1}</div>
-          <div className="product-pair">
-            <span className="product-name">{item.produit1}</span>
-            <span className="product-plus">+</span>
-            <span className="product-name">{item.produit2}</span>
-          </div>
-          <div className="placement-stats">
-            <span className="stat-badge">Lift: {item.lift}</span>
-            <span className="stat-badge">Confiance: {item.confiance}%</span>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
-
-{/* Produits à RAPPROCHER (rarement achetés ensemble) */}
-{placementSuggestions.a_rapprocher && placementSuggestions.a_rapprocher.length > 0 && (
-  <div className="recommendation-section">
-    <h4 className="section-title rapprocher-title">
-      ✅ Produits à RAPPROCHER (rarement achetés ensemble)
-    </h4>
-    <div className="product-grid">
-      {placementSuggestions.a_rapprocher.map((item, idx) => (
-        <div key={idx} className="product-card rapprocher-card">
-          <div className="product-rank">{idx + 1}</div>
-          <div className="product-pair">
-            <span className="product-name">{item.produit1}</span>
-            <span className="product-plus">+</span>
-            <span className="product-name">{item.produit2}</span>
-          </div>
-          <div className="placement-stats">
-            <span className="stat-badge">Lift: {item.lift}</span>
-            <span className="stat-badge">Confiance: {item.confiance}%</span>
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
-
-              {(!placementSuggestions.a_rapprocher || placementSuggestions.a_rapprocher.length === 0) && 
-               (!placementSuggestions.a_eloigner || placementSuggestions.a_eloigner.length === 0) && (
-                <div className="empty-state">
-                  Aucune suggestion de placement pour les filtres sélectionnés
-                </div>
-              )}
+                      <div className="card-body">
+                        <p className="card-description">{rec.description}</p>
+                        <p className="card-placement">{rec.placement}</p>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
-          )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ResultSection({ title, description, items, type, icon }) {
+  if (!items?.length) return null;
+
+  return (
+    <div className="result-section">
+      <div className={`section-header ${type}`}>
+        <div className="header-icon">{icon}</div>
+        <div className="header-text">
+          <h3>{title}</h3>
+          <p>{description}</p>
         </div>
-      )}
+      </div>
+      <div className="result-grid">
+        {items.map((item, index) => (
+          <div className="product-card" key={index}>
+            <div className="card-rank">{index + 1}</div>
+            <div className="card-pair">
+              <span className="product-name">{item.produit1}</span>
+              <span className="product-separator">+</span>
+              <span className="product-name">{item.produit2}</span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

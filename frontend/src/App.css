@@ -10,7 +10,7 @@
 .sidebar {
   width: 250px;
   height: 100vh;
-  background: linear-gradient(180deg, #1e3a8a, #2563eb);
+  background: linear-gradient(180deg, #1e3b8ae7, #0c7c3bc5);
   color: white;
   padding: 20px;
   display: flex;
@@ -100,4 +100,130 @@ input, select {
   border-radius: 8px;
   border: 1px solid #ccc;
   margin-right: 10px;
+}
+
+
+/* Ajoutez ou mettez à jour dans App.css */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-name {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.user-role {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.user-role.admin {
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+  color: #155724;
+}
+
+.user-role.user {
+  background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+  color: #0c5460;
+}
+
+.logout-btn {
+  margin-top: 30px !important;
+  background: linear-gradient(135deg, #afe9ad9a, #99e9d15d) !important;
+  color: white !important;
+}
+
+.logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+
+/* Styles pour les icônes du menu */
+.menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  width: 20px;
+}
+
+.menu-icon svg {
+  display: block;
+}
+
+.logout-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px 16px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.logout-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* User info dans le topbar */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  padding: 8px 16px;
+  border-radius: 100px;
+}
+
+.user-icon {
+  display: inline-flex;
+  align-items: center;
+  color: #64748b;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.user-role {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 100px;
+}
+
+.user-role.admin {
+  background: #eef2ff;
+  color: #6366f1;
+}
+
+.user-role.user {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.sidebar hr {
+  border: none;
+  height: 1px;
+  background: #e2e8f0;
+  margin: 16px 0;
+}
+
+.sidebar hr::before,
+.sidebar hr::after {
+  content: none;
+  display: none;
 }
