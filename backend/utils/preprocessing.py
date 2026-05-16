@@ -5,7 +5,7 @@ from mlxtend.frequent_patterns import apriori, association_rules
 
 def load_data():
     df = pd.read_csv(
-        "C:/Users/mariem/Documents/smart-sales-analytics/backend/data/ACHAT_NETTOYE_V2.csv",
+        "C:/Users/HP/Desktop/ACHAT_NETTOYE_final.csv",
         sep=";",
         encoding="utf-8-sig",
         on_bad_lines="skip"
