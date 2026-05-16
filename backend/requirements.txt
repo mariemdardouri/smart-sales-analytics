@@ -4,3 +4,11 @@ pandas
 scikit-learn
 google-generativeai
 langchain
+
+
+psycopg2-binary
+python-jose
+passlib
+bcrypt
+pydantic
+python-multipart
