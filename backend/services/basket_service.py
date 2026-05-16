@@ -234,5 +234,141 @@ def _generer_conseils_placement(recommendations: dict, top_n: int) -> list:
             "message": f"✅ À RAPPROCHER : {produits_str}",
             "detail": "Ces produits sont rarement achetés ensemble → vous pouvez les placer côte à côte"
         })
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FONCTIONS POUR L'OPTIMISATION DU LAYOUT DU MAGASIN (PAR CATÉGORIES)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FONCTIONS POUR L'OPTIMISATION DU LAYOUT DU MAGASIN (VERSION CACHÉE)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Cache global pour les résultats (calculé une seule fois)
+_LAYOUT_CACHE = None
+_CACHE_DELEGATION = None
+
+def get_store_layout_recommendations(df: pd.DataFrame, delegation: str = None) -> dict:
+    """
+    Génère un plan de disposition des rayons basé sur les relations entre catégories.
+    Version optimisée : analyse toutes les données une seule fois, puis filtre.
+    """
+    global _LAYOUT_CACHE, _CACHE_DELEGATION
     
-    return conseils
+    df_f = df.copy()
+    df_f["date_dachat"] = pd.to_datetime(df_f["date_dachat"], errors="coerce")
+    
+    # Si on a déjà calculé pour cette délégation, retourner le cache
+    if _LAYOUT_CACHE is not None and _CACHE_DELEGATION == delegation:
+        print(f"📦 Layout en cache pour la délégation: {delegation if delegation else 'Toutes'}")
+        return _LAYOUT_CACHE
+    
+    print(f"📊 Calcul du layout (premier chargement) sur toutes les données...")
+    
+    # Créer la clé de transaction
+    df_f["transaction"] = (
+        df_f["client_id"].astype(str)
+        + "_"
+        + df_f["date_dachat"].dt.strftime("%Y-%m-%d")
+    )
+    
+    # Analyser les paniers par catégorie (une seule fois)
+    transactions_categories = []
+    
+    for trans_id, group in df_f.groupby("transaction"):
+        categories_in_trans = group["categorie"].dropna().unique().tolist()
+        if len(categories_in_trans) >= 2:
+            transactions_categories.append(sorted(categories_in_trans))
+    
+    print(f"  Transactions avec au moins 2 catégories: {len(transactions_categories)}")
+    
+    if not transactions_categories:
+        return {
+            "delegation": delegation if delegation else "Toutes délégations",
+            "zones_a_rapprocher": [],
+            "zones_a_eloigner": [],
+            "plan_suggestion": ["Aucune transaction avec multiples catégories"]
+        }
+    
+    # Compter les co-occurrences entre catégories (une seule fois)
+    category_pairs = Counter()
+    category_support = Counter()
+    
+    for cats in transactions_categories:
+        for cat in cats:
+            category_support[cat] += 1
+        for i in range(len(cats)):
+            for j in range(i+1, len(cats)):
+                pair = tuple(sorted([cats[i], cats[j]]))
+                category_pairs[pair] += 1
+    
+    total_trans = len(transactions_categories)
+    
+    # Calculer les scores pour chaque paire (une seule fois)
+    a_rapprocher = []
+    a_eloigner = []
+    
+    for (cat1, cat2), freq in category_pairs.items():
+        freq1 = category_support[cat1]
+        freq2 = category_support[cat2]
+        
+        if freq1 == 0 or freq2 == 0:
+            continue
+        
+        expected = (freq1 * freq2) / total_trans if total_trans > 0 else 0
+        lift = freq / expected if expected > 0 else 0
+        confidence = (freq / freq1) * 100 if freq1 > 0 else 0
+        
+        if lift >= 1.1 and confidence >= 5:
+            # Association positive → À éloigner
+            a_eloigner.append({
+                "description": f"{cat1} et {cat2}",
+                "benefice": f"Lift: {lift:.2f} - Ces catégories sont souvent achetées ensemble",
+                "lift": lift,
+                "confidence": confidence
+            })
+        elif lift < 0.9 or confidence < 3:
+            # Association négative → À rapprocher
+            a_rapprocher.append({
+                "description": f"{cat1} et {cat2}",
+                "benefice": f"Lift: {lift:.2f} - Ces catégories sont rarement achetées ensemble",
+                "lift": lift,
+                "confidence": confidence
+            })
+        else:
+            # Neutre → À rapprocher par défaut
+            a_rapprocher.append({
+                "description": f"{cat1} et {cat2}",
+                "benefice": f"Lift: {lift:.2f} - Association neutre",
+                "lift": lift,
+                "confidence": confidence
+            })
+    
+    # Trier
+    a_eloigner.sort(key=lambda x: x["lift"], reverse=True)
+    a_rapprocher.sort(key=lambda x: x["lift"])
+    
+    # Mettre en cache
+    _LAYOUT_CACHE = {
+        "delegation": delegation if delegation else "Toutes délégations",
+        "zones_a_rapprocher": a_rapprocher[:10],
+        "zones_a_eloigner": a_eloigner[:10],
+        "plan_suggestion": [
+            "Placez les rayons à rapprocher dans la même allée ou en vis-à-vis",
+            "Disposez les rayons à éloigner aux extrémités opposées du magasin",
+            "Utilisez les têtes de gondole pour les produits à fort potentiel"
+        ]
+    }
+    _CACHE_DELEGATION = delegation
+    
+    print(f"  ✅ Résultats: {len(a_eloigner)} à éloigner, {len(a_rapprocher)} à rapprocher")
+    
+    return _LAYOUT_CACHE
+
+
+def get_layout_by_delegation(df: pd.DataFrame, delegation: str = None) -> dict:
+    """
+    Point d'entrée API pour obtenir le layout recommandé.
+    Le paramètre delegation est ignoré car on analyse toutes les données ensemble.
+    """
+    return get_store_layout_recommendations(df, delegation)
